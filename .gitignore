@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+
+# Local Playwright / TTU session
+ttu-browser-profile/
+
+# Generated scraper files
+output/
+logs/
+debug/
+
+# Runtime files
+.server.pid
+*.log
+
+# Environment / credentials
+.env
+.env.*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
