@@ -19,6 +19,8 @@ let state = {
     message: "Starting local server...",
     connected: false,
     loginRequired: false,
+    authStep: "none",
+    authPhone: "",
     busy: false,
     current: 0,
     total: 0,
@@ -149,10 +151,30 @@ async function handleAPI(req, res, url) {
 
             try {
                 const terms = await scraper.login(username, password);
+
+                if (!terms.length && scraper.authStep && scraper.authStep !== "none") {
+                    patchState({
+                        busy: false,
+                        connected: false,
+                        loginRequired: scraper.authStep === "login-required",
+                        authStep: scraper.authStep,
+                        authPhone: scraper.authPhone || "",
+                        phase: scraper.authStep
+                    });
+                    return json(res, 200, {
+                        ok: true,
+                        terms: [],
+                        authStep: scraper.authStep,
+                        authPhone: scraper.authPhone || ""
+                    });
+                }
+
                 patchState({
                     busy: false,
                     connected: true,
                     loginRequired: false,
+                    authStep: "none",
+                    authPhone: "",
                     phase: "ready",
                     message: `Connected to Cognos. Found ${terms.length} terms.`
                 });
@@ -167,6 +189,82 @@ async function handleAPI(req, res, url) {
                     message: error.message
                 });
                 return json(res, 401, { error: error.message, loginRequired: true });
+            }
+        }
+
+        if (req.method === "POST" && url.pathname === "/api/mfa/send") {
+            if (state.busy) return json(res, 409, { error: "The scraper is already busy." });
+            const body = await readJSON(req);
+            const method = String(body.method || "sms").toLowerCase() === "voice" ? "voice" : "sms";
+
+            patchState({
+                busy: true,
+                connected: false,
+                loginRequired: false,
+                phase: "mfa-sending",
+                authStep: "mfa-sending",
+                message: method === "voice" ? "Requesting a Texas Tech verification call..." : "Requesting a Texas Tech verification text message...",
+                lastError: null
+            });
+
+            try {
+                const terms = await scraper.sendMfa(method);
+                if (terms.length) {
+                    patchState({ busy: false, connected: true, loginRequired: false, authStep: "none", authPhone: "", phase: "ready", message: `Connected to Cognos. Found ${terms.length} terms.` });
+                } else {
+                    patchState({ busy: false, connected: false, loginRequired: false, authStep: scraper.authStep, authPhone: scraper.authPhone || state.authPhone || "", phase: scraper.authStep });
+                }
+                return json(res, 200, { ok: true, terms, authStep: scraper.authStep, authPhone: scraper.authPhone || "" });
+            } catch (error) {
+                patchState({ busy: false, connected: false, authStep: scraper.authStep || "mfa-method", phase: scraper.authStep || "mfa-method", lastError: error.message, message: error.message });
+                return json(res, 400, { error: error.message, authStep: scraper.authStep || "mfa-method" });
+            }
+        }
+
+        if (req.method === "POST" && url.pathname === "/api/mfa/verify") {
+            if (state.busy) return json(res, 409, { error: "The scraper is already busy." });
+            const body = await readJSON(req);
+            const code = String(body.code || "");
+            const registerBrowser = Boolean(body.registerBrowser);
+
+            patchState({
+                busy: true,
+                connected: false,
+                loginRequired: false,
+                phase: "mfa-verifying",
+                authStep: "mfa-verifying",
+                message: "Verifying the Texas Tech code...",
+                lastError: null
+            });
+
+            try {
+                const terms = await scraper.verifyMfa(code, registerBrowser);
+                if (terms.length) {
+                    patchState({ busy: false, connected: true, loginRequired: false, authStep: "none", authPhone: "", phase: "ready", message: `Connected to Cognos. Found ${terms.length} terms.` });
+                } else {
+                    patchState({ busy: false, connected: false, loginRequired: false, authStep: scraper.authStep, authPhone: scraper.authPhone || "", phase: scraper.authStep });
+                }
+                return json(res, 200, { ok: true, terms, authStep: scraper.authStep });
+            } catch (error) {
+                const phase = error.code === "MFA_CODE_ERROR" ? "mfa-code" : (scraper.authStep || "mfa-code");
+                patchState({ busy: false, connected: false, loginRequired: false, authStep: phase, phase, lastError: error.message, message: error.message });
+                return json(res, 400, { error: error.message, authStep: phase });
+            }
+        }
+
+        if (req.method === "GET" && url.pathname === "/api/auth-preview") {
+            try {
+                const png = await scraper.getAuthPreview();
+                res.writeHead(200, {
+                    "Content-Type": "image/png",
+                    "Content-Length": png.length,
+                    "Cache-Control": "no-store, no-cache, must-revalidate",
+                    "X-Content-Type-Options": "nosniff"
+                });
+                res.end(png);
+                return;
+            } catch (error) {
+                return json(res, 404, { error: error.message });
             }
         }
 
@@ -255,11 +353,20 @@ async function handleAPI(req, res, url) {
             try {
                 await scraper.close();
                 const terms = await scraper.connect();
-                if (!terms.length && scraper.loginRequired) {
-                    patchState({ busy: false, connected: false, loginRequired: true, phase: "login-required", message: "Texas Tech sign-in required." });
-                    return json(res, 200, { terms: [], loginRequired: true });
+                if (!terms.length && scraper.authStep && scraper.authStep !== "none") {
+                    const phase = scraper.authStep;
+                    patchState({
+                        busy: false,
+                        connected: false,
+                        loginRequired: phase === "login-required",
+                        authStep: phase,
+                        authPhone: scraper.authPhone || "",
+                        phase,
+                        message: phase === "login-required" ? "Texas Tech sign-in required." : state.message
+                    });
+                    return json(res, 200, { terms: [], loginRequired: phase === "login-required", authStep: phase, authPhone: scraper.authPhone || "" });
                 }
-                patchState({ busy: false, connected: true, loginRequired: false, phase: "ready" });
+                patchState({ busy: false, connected: true, loginRequired: false, authStep: "none", authPhone: "", phase: "ready" });
                 return json(res, 200, { terms });
             } catch (error) {
                 patchState({ busy: false, phase: "error", lastError: error.message, message: error.message });
@@ -323,7 +430,7 @@ server.listen(PORT, HOST, () => {
     const url = `http://${HOST}:${PORT}`;
     try { fs.writeFileSync(PID_FILE, String(process.pid)); } catch {}
     console.log("======================================");
-    console.log(" TTU GRADE SCRAPER V2.6");
+    console.log(" TTU GRADE SCRAPER V2.8");
     console.log("======================================");
     console.log(`GUI: ${url}`);
     console.log("Playwright runs headless unless a future fallback is needed.\n");
@@ -333,19 +440,24 @@ server.listen(PORT, HOST, () => {
 
     scraper.connect()
         .then(terms => {
-            if (!terms.length && scraper.loginRequired) {
+            if (!terms.length && scraper.authStep && scraper.authStep !== "none") {
+                const phase = scraper.authStep;
                 patchState({
                     connected: false,
-                    loginRequired: true,
+                    loginRequired: phase === "login-required",
+                    authStep: phase,
+                    authPhone: scraper.authPhone || "",
                     busy: false,
-                    phase: "login-required",
-                    message: "Texas Tech sign-in required."
+                    phase,
+                    message: phase === "login-required" ? "Texas Tech sign-in required." : state.message
                 });
                 return;
             }
             patchState({
                 connected: true,
                 loginRequired: false,
+                authStep: "none",
+                authPhone: "",
                 busy: false,
                 phase: "ready",
                 message: `Connected to Cognos. Found ${terms.length} terms.`

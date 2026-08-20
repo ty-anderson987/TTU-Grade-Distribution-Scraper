@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TTU Grade Scraper V2.6</title>
+<title>TTU Grade Scraper V2.8</title>
 <style>
 :root {
     color-scheme: light;
@@ -96,6 +96,21 @@ button.primary:hover:not(:disabled), .button-link.primary:hover { background: va
     width: 100%; border: 1px solid #aaa; border-radius: 8px; padding: 10px 11px; font: inherit; background: white;
 }
 .login-actions { display: flex; align-items: center; gap: 10px; margin-top: 13px; flex-wrap: wrap; }
+
+.auth-flow { display: grid; gap: 12px; }
+.auth-panel { border: 1px solid var(--line); border-radius: 10px; background: var(--soft); padding: 13px; }
+.auth-panel h3 { margin: 0 0 6px; font-size: 16px; }
+.auth-panel p { margin: 0 0 10px; }
+.auth-methods { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.auth-code-row { display: grid; grid-template-columns: minmax(180px, 280px) auto; gap: 9px; align-items: end; }
+.remember-row { margin-top: 10px; display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.remember-row input { margin: 0; }
+.preview-help { display: flex; gap: 9px; align-items: center; flex-wrap: wrap; margin-top: 11px; }
+.modal { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.72); display: grid; place-items: center; padding: 20px; }
+.modal-card { width: min(1100px, 96vw); max-height: 92vh; overflow: auto; background: white; border-radius: 12px; border: 1px solid #aaa; box-shadow: 0 24px 80px rgba(0,0,0,.35); }
+.modal-head { position: sticky; top: 0; z-index: 2; background: white; border-bottom: 1px solid var(--line); padding: 11px 13px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.modal-head strong { font-size: 16px; }
+.preview-image { display: block; width: 100%; height: auto; background: #eee; }
 .selector-grid {
     display: grid;
     grid-template-columns: minmax(250px, 1fr) auto minmax(250px, 1fr) auto;
@@ -206,7 +221,7 @@ footer { max-width: 1220px; margin: 0 auto; padding: 0 20px 28px; color: var(--m
 @media (max-width: 650px) {
     main { padding: 12px; }
     .header-inner { padding: 18px 14px 15px; }
-    .login-grid, .progress-grid { grid-template-columns: 1fr; }
+    .login-grid, .progress-grid, .auth-code-row { grid-template-columns: 1fr; }
     .course-table th:nth-child(3), .course-table td:nth-child(3) { display: none; }
     .course-table td:last-child { width: 155px; }
     .multi-panel { width: min(92vw, 360px); }
@@ -216,7 +231,7 @@ footer { max-width: 1220px; margin: 0 auto; padding: 0 20px 28px; color: var(--m
 <body>
 <header>
     <div class="header-inner">
-        <h1>TTU Grade Distribution Scraper V2.6</h1>
+        <h1>TTU Grade Distribution Scraper V2.8</h1>
         <p>Choose a course once, then choose the terms for that course. Cognos runs headless in the background.</p>
     </div>
     <div class="activity-shell"><div id="activityBar" class="activity-bar"></div></div>
@@ -247,6 +262,49 @@ footer { max-width: 1220px; margin: 0 auto; padding: 0 20px 28px; color: var(--m
             <div class="login-actions"><button id="loginBtn" class="primary" type="button">Sign in</button><span id="loginHint" class="muted">Enter credentials, then complete any TTU text-message/MFA verification if requested.</span></div>
         </div>
     </section>
+
+    <section id="mfaStep" class="card hidden">
+        <div class="card-head">
+            <div><h2>Texas Tech verification</h2><div class="muted">The hidden Playwright browser is paused at Texas Tech authentication. Complete the requested step here and the scraper will continue automatically.</div></div>
+        </div>
+        <div class="card-body auth-flow">
+            <div id="mfaMethodPanel" class="auth-panel hidden">
+                <h3>Choose verification method</h3>
+                <p id="mfaPhoneText" class="help">Texas Tech is asking where to send your verification code.</p>
+                <div class="auth-methods">
+                    <button id="sendSmsBtn" class="primary" type="button">Send text message</button>
+                    <button id="sendVoiceBtn" type="button">Voice call</button>
+                </div>
+            </div>
+
+            <div id="mfaCodePanel" class="auth-panel hidden">
+                <h3>Enter verification code</h3>
+                <p class="help">Enter the code Texas Tech sent to your phone. The code is submitted directly to the hidden TTU page and is not saved.</p>
+                <div class="auth-code-row">
+                    <div class="field"><label for="mfaCode">Verification code</label><input id="mfaCode" inputmode="numeric" autocomplete="one-time-code" placeholder="Code"></div>
+                    <button id="verifyMfaBtn" class="primary" type="button">Verify</button>
+                </div>
+                <label class="remember-row"><input id="registerBrowser" type="checkbox"> Register this browser with Texas Tech on this private computer</label>
+            </div>
+
+            <div id="mfaWaitingPanel" class="auth-panel hidden">
+                <h3>Waiting for Texas Tech</h3>
+                <p id="mfaWaitingText" class="help">Texas Tech is processing authentication in the background.</p>
+            </div>
+
+            <div class="preview-help">
+                <button id="authPreviewBtn" type="button">Preview TTU authentication page</button>
+                <span class="muted">Useful if Texas Tech shows a verification page this app does not recognize, including a QR-code prompt.</span>
+            </div>
+        </div>
+    </section>
+
+    <div id="authPreviewModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Texas Tech authentication preview">
+        <div class="modal-card">
+            <div class="modal-head"><strong>Live TTU authentication preview</strong><div class="actions"><button id="refreshPreviewBtn" type="button">Refresh</button><button id="closePreviewBtn" type="button">Close</button></div></div>
+            <img id="authPreviewImage" class="preview-image" alt="Screenshot of the current Texas Tech authentication page">
+        </div>
+    </div>
 
     <section class="card">
         <div class="card-head">
@@ -354,11 +412,35 @@ function setError(message) {
     box.textContent = message || "";
     box.classList.toggle("hidden", !message);
 }
-function setLoginVisible(visible, status = {}) {
-    $("loginStep").classList.toggle("hidden", !visible);
-    const busy = ["signing-in", "mfa"].includes(status.phase);
-    $("loginBtn").disabled = busy;
-    $("loginBtn").textContent = status.phase === "signing-in" ? "Signing in..." : status.phase === "mfa" ? "Waiting for verification..." : "Sign in";
+function setAuthVisible(status = {}) {
+    const phase = status.phase || "";
+    const loginVisible = status.loginRequired || ["login-required", "signing-in"].includes(phase);
+    const mfaVisible = phase.startsWith("mfa-") || phase === "auth-check";
+
+    $("loginStep").classList.toggle("hidden", !loginVisible);
+    $("mfaStep").classList.toggle("hidden", !mfaVisible);
+
+    const loginBusy = phase === "signing-in";
+    $("loginBtn").disabled = loginBusy;
+    $("loginBtn").textContent = loginBusy ? "Signing in..." : "Sign in";
+
+    const method = phase === "mfa-method";
+    const code = phase === "mfa-code";
+    const waiting = mfaVisible && !method && !code;
+    $("mfaMethodPanel").classList.toggle("hidden", !method);
+    $("mfaCodePanel").classList.toggle("hidden", !code);
+    $("mfaWaitingPanel").classList.toggle("hidden", !waiting);
+
+    const phone = status.authPhone || "";
+    $("mfaPhoneText").textContent = phone
+        ? `Texas Tech will send the verification code to ${phone}.`
+        : "Texas Tech is asking how you want to receive the verification code.";
+    $("mfaWaitingText").textContent = status.message || "Texas Tech is processing authentication in the background.";
+
+    const authBusy = ["auth-check", "mfa-sending", "mfa-verifying"].includes(phase) || Boolean(status.busy);
+    $("sendSmsBtn").disabled = authBusy;
+    $("sendVoiceBtn").disabled = authBusy;
+    $("verifyMfaBtn").disabled = authBusy;
 }
 async function submitLogin() {
     setError("");
@@ -371,10 +453,12 @@ async function submitLogin() {
     $("loginPassword").value = "";
     try {
         const data = await api("/api/login", { method: "POST", body });
-        app.terms = data.terms || [];
-        app.termsLoaded = true;
-        renderTerms();
-        setLoginVisible(false);
+        if ((data.terms || []).length) {
+            app.terms = data.terms;
+            app.termsLoaded = true;
+            renderTerms();
+        }
+        setAuthVisible({ phase: data.authStep || ((data.terms || []).length ? "ready" : "auth-check"), authPhone: data.authPhone || "", connected: Boolean((data.terms || []).length) });
     } catch (error) {
         setError(error.message);
         $("loginBtn").disabled = false;
@@ -552,7 +636,7 @@ function updateActivity(status) {
     bar.classList.remove("indeterminate");
     const phase = status.phase;
     const total = Number(status.total || 0); const current = Number(status.current || 0);
-    if (["connecting","signing-in","mfa"].includes(phase)) { bar.classList.add("indeterminate"); return; }
+    if (["connecting","signing-in","auth-check","mfa-method","mfa-sending","mfa-code","mfa-verifying","mfa-preview"].includes(phase)) { bar.classList.add("indeterminate"); return; }
     if (["loading-subjects","loading-courses","scraping"].includes(phase) && total) {
         let value = Math.max(0, Math.min(total, phase === "scraping" ? current - 1 : current));
         bar.style.width = `${Math.round((value / total) * 100)}%`; return;
@@ -580,6 +664,39 @@ function updateInlineProgress(status) {
 $("loginBtn").addEventListener("click", submitLogin);
 $("loginUsername").addEventListener("keydown", e => { if (e.key === "Enter") $("loginPassword").focus(); });
 $("loginPassword").addEventListener("keydown", e => { if (e.key === "Enter") submitLogin(); });
+
+async function sendMfa(method) {
+    setError("");
+    $("sendSmsBtn").disabled = true;
+    $("sendVoiceBtn").disabled = true;
+    try {
+        const data = await api("/api/mfa/send", { method: "POST", body: JSON.stringify({ method }) });
+        if ((data.terms || []).length) { app.terms = data.terms; app.termsLoaded = true; renderTerms(); }
+    } catch (error) { setError(error.message); }
+}
+async function verifyMfa() {
+    setError("");
+    const code = $("mfaCode").value.trim();
+    if (!code) return setError("Enter the Texas Tech verification code.");
+    const body = JSON.stringify({ code, registerBrowser: $("registerBrowser").checked });
+    $("mfaCode").value = "";
+    $("verifyMfaBtn").disabled = true;
+    try {
+        const data = await api("/api/mfa/verify", { method: "POST", body });
+        if ((data.terms || []).length) { app.terms = data.terms; app.termsLoaded = true; renderTerms(); }
+    } catch (error) { setError(error.message); }
+}
+function refreshAuthPreview() {
+    $("authPreviewImage").src = `/api/auth-preview?t=${Date.now()}`;
+}
+$("sendSmsBtn").addEventListener("click", () => sendMfa("sms"));
+$("sendVoiceBtn").addEventListener("click", () => sendMfa("voice"));
+$("verifyMfaBtn").addEventListener("click", verifyMfa);
+$("mfaCode").addEventListener("keydown", e => { if (e.key === "Enter") verifyMfa(); });
+$("authPreviewBtn").addEventListener("click", () => { $("authPreviewModal").classList.remove("hidden"); refreshAuthPreview(); });
+$("refreshPreviewBtn").addEventListener("click", refreshAuthPreview);
+$("closePreviewBtn").addEventListener("click", () => $("authPreviewModal").classList.add("hidden"));
+$("authPreviewModal").addEventListener("click", e => { if (e.target === $("authPreviewModal")) $("authPreviewModal").classList.add("hidden"); });
 $("termsAll").addEventListener("click", e => { e.preventDefault(); setChecks("#termsList input.term-check", true); clearCatalog(); updateTermsSummary(); });
 $("termsNone").addEventListener("click", e => { e.preventDefault(); setChecks("#termsList input.term-check", false); clearCatalog(); updateTermsSummary(); });
 $("subjectsAll").addEventListener("click", e => { e.preventDefault(); setChecks("#subjectsList input.subject-check", true); clearCoursesOnly(); updateSubjectsSummary(); });
@@ -630,10 +747,21 @@ async function pollStatus(){
     try{
         const status=await api("/api/status"); app.lastStatus=status;
         const dot=$("statusDot"); dot.className="dot";
-        if(status.phase==="error")dot.classList.add("error"); else if(status.busy||["connecting","login-required","signing-in","mfa","loading-subjects","loading-courses","scraping"].includes(status.phase))dot.classList.add("busy"); else if(status.connected)dot.classList.add("ready");
+        const authPhases=["login-required","signing-in","auth-check","mfa-method","mfa-sending","mfa-code","mfa-verifying","mfa-preview"];
+        if(status.phase==="error")dot.classList.add("error"); else if(status.busy||["connecting","loading-subjects","loading-courses","scraping",...authPhases].includes(status.phase))dot.classList.add("busy"); else if(status.connected)dot.classList.add("ready");
         $("statusMessage").textContent=status.message||status.phase||"Ready";
-        if(status.loginRequired||["login-required","signing-in","mfa"].includes(status.phase))setLoginVisible(true,status); else if(status.connected)setLoginVisible(false,status);
-        $("statusDetail").textContent = status.phase==="mfa" ? "Complete any Texas Tech text-message/MFA verification if requested; Cognos will continue automatically." : status.phase==="login-required" ? "Your saved TTU session is not active. Sign in above; Playwright stays hidden." : status.connected ? "Connected to Cognos. Browser automation is running headless in the background." : "Connecting to Cognos...";
+        setAuthVisible(status);
+        const detailByPhase={
+            "login-required":"Your saved TTU session is not active. Sign in above; Playwright remains hidden.",
+            "signing-in":"Playwright is entering your credentials on the Texas Tech sign-in page.",
+            "auth-check":"Credentials were submitted. Waiting for Texas Tech to decide whether additional verification is required.",
+            "mfa-method":"Texas Tech requires verification. Choose text message or voice call below.",
+            "mfa-sending":"Texas Tech is sending your verification code.",
+            "mfa-code":"Enter the code below. After verification, Cognos continues automatically.",
+            "mfa-verifying":"Texas Tech is checking the verification code.",
+            "mfa-preview":"Texas Tech is on an authentication page this app has not recognized yet. Open the preview to see it."
+        };
+        $("statusDetail").textContent = detailByPhase[status.phase] || (status.connected ? "Connected to Cognos. Browser automation is running headless in the background." : "Connecting to Cognos...");
         updateActivity(status); updateInlineProgress(status);
         if(status.phase==="scraping"||status.phase==="complete"){
             const total=Number(status.total||0), current=Number(status.current||0), completed=Math.max(0,Math.min(total,status.phase==="complete"?total:current-1)), pct=total?Math.round(completed/total*100):0;
@@ -648,6 +776,12 @@ async function pollStatus(){
         app.lastPhase=status.phase;
     }catch(error){$("statusDot").className="dot error";$("statusMessage").textContent="Local server connection lost";$("statusDetail").textContent="Start the scraper again to reconnect.";}
 }
+document.addEventListener("click", event => {
+    document.querySelectorAll("details.multi-select[open], details.term-picker[open]").forEach(details => {
+        if (!details.contains(event.target)) details.open = false;
+    });
+});
+
 pollStatus(); setInterval(pollStatus, 400);
 </script>
 </body>

@@ -1,6 +1,6 @@
 {
-  "name": "ttu-grade-scraper-v2-6",
-  "version": "2.6.0",
+  "name": "ttu-grade-scraper-v2-7",
+  "version": "2.8.0",
   "description": "Headless local web GUI for Texas Tech Cognos grade distribution scraping, course/professor analytics and visual grade distributions.",
   "main": "server.js",
   "scripts": {
@@ -13,7 +13,7 @@
     "playwright",
     "grade-distribution"
   ],
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "engines": {
     "node": ">=20"

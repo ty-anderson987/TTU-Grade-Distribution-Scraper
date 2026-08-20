@@ -52,6 +52,8 @@ class TTUGradeScraper {
         this.page = null;
         this.connectPromise = null;
         this.loginRequired = false;
+        this.authStep = "none";
+        this.authPhone = "";
         this.headless = true;
         this.terms = [];
         this.subjectsByTerm = new Map();
@@ -72,7 +74,7 @@ class TTUGradeScraper {
 
         // A headless browser may already be sitting on the TTU sign-in page.
         // Do not launch a second persistent context against the same profile.
-        if (this.context && this.page && this.loginRequired) {
+        if (this.context && this.page && (this.loginRequired || this.authStep !== "none")) {
             return [];
         }
 
@@ -101,9 +103,14 @@ class TTUGradeScraper {
         );
 
         await this.context.route("**/*", async route => {
-            const type = route.request().resourceType();
+            const request = route.request();
+            const type = request.resourceType();
+            const url = request.url();
 
-            if (type === "image" || type === "media" || type === "font") {
+            // Keep Cognos light, but allow authentication images so a local
+            // preview can still show QR codes or other verification content.
+            if (type === "media" || type === "font" ||
+                (type === "image" && url.includes("cognos.texastech.edu"))) {
                 await route.abort();
                 return;
             }
@@ -133,11 +140,23 @@ class TTUGradeScraper {
 
         if (auth.type === "login") {
             this.loginRequired = true;
-            this.status("Texas Tech sign-in required.", {
-                phase: "login-required",
-                connected: false,
-                loginRequired: true
-            });
+            this.setAuthStep("login-required", "Texas Tech sign-in required.");
+            return [];
+        }
+
+        if (auth.type === "mfa-method") {
+            this.loginRequired = false;
+            this.setAuthStep(
+                "mfa-method",
+                "Texas Tech requires identity verification. Choose how to receive the code.",
+                { authPhone: auth.phone }
+            );
+            return [];
+        }
+
+        if (auth.type === "mfa-code") {
+            this.loginRequired = false;
+            this.setAuthStep("mfa-code", "Enter the Texas Tech verification code to continue.");
             return [];
         }
 
@@ -155,6 +174,8 @@ class TTUGradeScraper {
         }
 
         this.loginRequired = false;
+        this.authStep = "none";
+        this.authPhone = "";
 
         this.status(`Connected. Found ${this.terms.length} terms.`, {
             phase: "ready",
@@ -165,60 +186,97 @@ class TTUGradeScraper {
         return this.terms;
     }
 
-    async waitForAuthState(page, timeoutMs = 120000) {
-        const deadline = Date.now() + timeoutMs;
+    async detectAuthState() {
+        if (!this.context) return { type: "unknown" };
 
-        while (Date.now() < deadline) {
-            const pages = page.context().pages();
+        for (const currentPage of this.context.pages()) {
+            for (const frame of currentPage.frames()) {
+                try {
+                    const selectCount = await frame.locator(SELECT_CONTROL_CSS).count();
+                    if (selectCount >= 3) {
+                        return { type: "ready", frame };
+                    }
 
-            for (const currentPage of pages) {
-                for (const frame of currentPage.frames()) {
-                    try {
-                        const selectCount = await frame.locator(SELECT_CONTROL_CSS).count();
-                        if (selectCount >= 3) {
-                            return { type: "ready", frame };
-                        }
+                    if (
+                        await frame.locator("#userNameInput").count() &&
+                        await frame.locator("#passwordInput").count()
+                    ) {
+                        const error = normalizeText(
+                            await frame.locator("#errorText").textContent().catch(() => "")
+                        );
+                        return { type: "login", frame, error };
+                    }
 
-                        const user = frame.locator("#userNameInput");
-                        const pass = frame.locator("#passwordInput");
-                        if (await user.count() && await pass.count()) {
-                            return { type: "login", frame };
-                        }
-                    } catch {}
+                    if (
+                        await frame.locator("#MainContent_selectcontactmethod_rblContactMethod_1").count() &&
+                        await frame.locator("#MainContent_selectcontactmethod_btnSendCode").count()
+                    ) {
+                        const phone = normalizeText(
+                            await frame.locator("#MainContent_selectcontactmethod_lblPhone")
+                                .textContent().catch(() => "")
+                        );
+                        const error = normalizeText(
+                            await frame.locator("#MainContent_selectcontactmethod_lblErrorMessage")
+                                .textContent().catch(() => "")
+                        );
+                        return { type: "mfa-method", frame, phone, error };
+                    }
+
+                    if (
+                        await frame.locator("#MainContent_verifycode_txtToken").count() &&
+                        await frame.locator("#MainContent_verifycode_btnVerifyToken").count()
+                    ) {
+                        const error = normalizeText(
+                            await frame.locator("#MainContent_verifycode_lblErrorMessage")
+                                .textContent().catch(() => "")
+                        );
+                        return { type: "mfa-code", frame, error };
+                    }
+                } catch {
+                    // Authentication redirects frequently detach/rebuild frames.
                 }
             }
+        }
 
+        return { type: "unknown" };
+    }
+
+    async waitForAuthState(page, timeoutMs = 120000, accepted = null) {
+        const deadline = Date.now() + timeoutMs;
+        const allowed = accepted ? new Set(accepted) : null;
+
+        while (Date.now() < deadline) {
+            const state = await this.detectAuthState();
+            if (state.type !== "unknown" && (!allowed || allowed.has(state.type))) {
+                return state;
+            }
             await pollDelay();
         }
 
-        throw new Error("Timed out waiting for Texas Tech login or the Cognos prompt.");
+        throw new Error("Timed out waiting for Texas Tech authentication or the Cognos prompt.");
     }
 
     async findLoginFrame(timeoutMs = 15000) {
-        if (!this.page || !this.context) {
-            return null;
-        }
-
         const deadline = Date.now() + timeoutMs;
-
         while (Date.now() < deadline) {
-            for (const currentPage of this.context.pages()) {
-                for (const frame of currentPage.frames()) {
-                    try {
-                        if (
-                            await frame.locator("#userNameInput").count() &&
-                            await frame.locator("#passwordInput").count()
-                        ) {
-                            return frame;
-                        }
-                    } catch {}
-                }
-            }
-
+            const state = await this.detectAuthState();
+            if (state.type === "login") return state.frame;
             await pollDelay();
         }
-
         return null;
+    }
+
+    setAuthStep(step, message, extra = {}) {
+        this.authStep = step;
+        if (extra.authPhone !== undefined) this.authPhone = extra.authPhone || "";
+        this.status(message, {
+            phase: step,
+            connected: false,
+            loginRequired: step === "login-required",
+            authStep: step,
+            authPhone: this.authPhone,
+            ...extra
+        });
     }
 
     async login(username, password) {
@@ -228,100 +286,186 @@ class TTUGradeScraper {
         if (!username || (!username.includes("@") && !username.includes("\\"))) {
             throw new Error("Use your @ttu.edu email or a ttu\\username style account name.");
         }
-
-        if (!password) {
-            throw new Error("Enter your Texas Tech password.");
-        }
+        if (!password) throw new Error("Enter your Texas Tech password.");
 
         await this.connect();
-
-        if (!this.loginRequired && this.terms.length) {
-            return this.terms;
-        }
+        if (!this.loginRequired && this.terms.length) return this.terms;
 
         const frame = await this.findLoginFrame(15000);
-        if (!frame) {
-            throw new Error("Texas Tech login form was not found. Try reconnecting.");
-        }
+        if (!frame) throw new Error("Texas Tech login form was not found. Try reconnecting.");
 
-        this.status("Signing in to Texas Tech...", {
-            phase: "signing-in",
-            connected: false,
-            loginRequired: true
-        });
-
+        this.setAuthStep("signing-in", "Signing in to Texas Tech...");
         await frame.locator("#userNameInput").fill(username);
         await frame.locator("#passwordInput").fill(password);
 
-        // Credentials are intentionally not stored on disk or retained by this object.
+        // Credentials are only used for this submission and are not retained.
         username = "";
         password = "";
 
         const submit = frame.locator("#submitButton");
-        if (!await submit.count()) {
-            throw new Error("Texas Tech Sign in button was not found.");
-        }
-
+        if (!await submit.count()) throw new Error("Texas Tech Sign in button was not found.");
         await submit.click();
 
-        this.status("Credentials submitted. Approve Duo/MFA if Texas Tech asks.", {
-            phase: "mfa",
-            connected: false,
-            loginRequired: false
-        });
+        this.setAuthStep("auth-check", "Credentials submitted. Checking Texas Tech authentication...");
 
-        const deadline = Date.now() + 180000;
+        let auth = null;
+        const authDeadline = Date.now() + 60000;
+        while (Date.now() < authDeadline) {
+            const candidate = await this.detectAuthState();
+            if (["ready", "mfa-method", "mfa-code"].includes(candidate.type)) {
+                auth = candidate;
+                break;
+            }
+            // The original login form can remain visible while the request is
+            // still in flight. Only treat it as a failure when TTU gives us
+            // an actual error message.
+            if (candidate.type === "login" && candidate.error) {
+                auth = candidate;
+                break;
+            }
+            await pollDelay();
+        }
+        if (!auth) {
+            this.setAuthStep(
+                "mfa-preview",
+                "Texas Tech is still waiting on authentication. Use the preview if a verification page is open."
+            );
+            return [];
+        }
 
+        if (auth.type === "ready") {
+            this.authStep = "none";
+            this.authPhone = "";
+            return await this.finishConnection(auth.frame);
+        }
+
+        if (auth.type === "login") {
+            const message = auth.error || "Texas Tech returned to the sign-in page. Check your username and password.";
+            this.loginRequired = true;
+            this.setAuthStep("login-required", message);
+            throw new Error(message);
+        }
+
+        if (auth.type === "mfa-method") {
+            this.loginRequired = false;
+            this.setAuthStep(
+                "mfa-method",
+                "Texas Tech requires identity verification. Choose how to receive the code.",
+                { authPhone: auth.phone }
+            );
+            return [];
+        }
+
+        this.loginRequired = false;
+        this.setAuthStep("mfa-code", "Verification code requested. Enter the code below.");
+        return [];
+    }
+
+    async sendMfa(method = "sms") {
+        const auth = await this.detectAuthState();
+        if (auth.type === "ready") return await this.finishConnection(auth.frame);
+        if (auth.type === "mfa-code") {
+            this.setAuthStep("mfa-code", "Verification code requested. Enter the code below.");
+            return [];
+        }
+        if (auth.type !== "mfa-method") {
+            throw new Error("The Texas Tech verification-method page is not currently available.");
+        }
+
+        const radioSelector = method === "voice"
+            ? "#MainContent_selectcontactmethod_rblContactMethod_0"
+            : "#MainContent_selectcontactmethod_rblContactMethod_1";
+
+        await auth.frame.locator(radioSelector).check();
+        this.setAuthStep(
+            "mfa-sending",
+            method === "voice" ? "Requesting a verification call..." : "Requesting a verification text message...",
+            { authPhone: auth.phone }
+        );
+        await auth.frame.locator("#MainContent_selectcontactmethod_btnSendCode").click();
+
+        const deadline = Date.now() + 60000;
         while (Date.now() < deadline) {
-            // Successful auth eventually returns us to the Cognos prompt.
-            let loginError = "";
-
-            for (const currentPage of this.context.pages()) {
-                for (const currentFrame of currentPage.frames()) {
-                    try {
-                        const selectCount = await currentFrame.locator(SELECT_CONTROL_CSS).count();
-                        if (selectCount >= 3) {
-                            return await this.finishConnection(currentFrame);
-                        }
-
-                        const errorText = await currentFrame
-                            .locator("#errorText")
-                            .textContent()
-                            .catch(() => "");
-
-                        if (normalizeText(errorText)) {
-                            loginError = normalizeText(errorText);
-                            break;
-                        }
-                    } catch {
-                        // Frames frequently detach while ADFS / Duo redirects.
-                    }
-                }
-
-                if (loginError) break;
+            const next = await this.detectAuthState();
+            if (next.type === "ready") return await this.finishConnection(next.frame);
+            if (next.type === "mfa-code") {
+                this.setAuthStep("mfa-code", "Verification code sent. Enter the code below.");
+                return [];
             }
-
-            if (loginError) {
+            if (next.type === "mfa-method" && next.error) {
+                this.setAuthStep("mfa-method", next.error, { authPhone: next.phone });
+                throw new Error(next.error);
+            }
+            if (next.type === "login") {
                 this.loginRequired = true;
-                this.status(loginError, {
-                    phase: "login-required",
-                    connected: false,
-                    loginRequired: true
-                });
-                throw new Error(loginError);
+                this.setAuthStep("login-required", next.error || "Texas Tech returned to the sign-in page.");
+                throw new Error(next.error || "Texas Tech returned to the sign-in page.");
             }
-
             await pollDelay();
         }
 
-        this.loginRequired = true;
-        this.status("MFA/login did not finish. Try signing in again.", {
-            phase: "login-required",
-            connected: false,
-            loginRequired: true
-        });
+        this.setAuthStep("mfa-method", "Texas Tech did not reach the verification-code page. Try sending the code again.", { authPhone: auth.phone });
+        throw new Error("Timed out waiting for the Texas Tech verification-code page.");
+    }
 
-        throw new Error("Timed out waiting for Duo/MFA or Cognos to finish signing in.");
+    async verifyMfa(code, registerBrowser = false) {
+        code = normalizeText(code);
+        if (!code) throw new Error("Enter the verification code sent by Texas Tech.");
+
+        const auth = await this.detectAuthState();
+        if (auth.type === "ready") return await this.finishConnection(auth.frame);
+        if (auth.type !== "mfa-code") {
+            throw new Error("The Texas Tech verification-code page is not currently available.");
+        }
+
+        this.setAuthStep("mfa-verifying", "Verifying the Texas Tech code...");
+        await auth.frame.locator("#MainContent_verifycode_txtToken").fill(code);
+        code = "";
+
+        const remember = auth.frame.locator("#MainContent_verifycode_chkRegisterBrowser");
+        if (await remember.count()) {
+            if (registerBrowser) await remember.check();
+            else await remember.uncheck();
+        }
+
+        await auth.frame.locator("#MainContent_verifycode_btnVerifyToken").click();
+
+        const deadline = Date.now() + 90000;
+        while (Date.now() < deadline) {
+            const next = await this.detectAuthState();
+            if (next.type === "ready") {
+                this.authStep = "none";
+                this.authPhone = "";
+                return await this.finishConnection(next.frame);
+            }
+            if (next.type === "mfa-code" && next.error) {
+                this.setAuthStep("mfa-code", next.error);
+                const error = new Error(next.error);
+                error.code = "MFA_CODE_ERROR";
+                throw error;
+            }
+            if (next.type === "mfa-method") {
+                this.setAuthStep("mfa-method", next.error || "Choose a verification method again.", { authPhone: next.phone });
+                return [];
+            }
+            if (next.type === "login") {
+                this.loginRequired = true;
+                this.setAuthStep("login-required", next.error || "Texas Tech returned to the sign-in page.");
+                throw new Error(next.error || "Texas Tech returned to the sign-in page.");
+            }
+            await pollDelay();
+        }
+
+        this.setAuthStep("mfa-code", "Texas Tech is taking longer than expected to verify the code. You can retry or preview the authentication page.");
+        throw new Error("Timed out waiting for Texas Tech to finish verification.");
+    }
+
+    async getAuthPreview() {
+        if (!this.context) throw new Error("The authentication browser is not running.");
+        const pages = this.context.pages();
+        const currentPage = pages[pages.length - 1] || this.page;
+        if (!currentPage) throw new Error("No Texas Tech authentication page is open.");
+        return await currentPage.screenshot({ type: "png", fullPage: true });
     }
 
     async requireReady() {
@@ -345,6 +489,8 @@ class TTUGradeScraper {
         this.page = null;
         this.connectPromise = null;
         this.loginRequired = false;
+        this.authStep = "none";
+        this.authPhone = "";
         this.terms = [];
     }
 
@@ -1023,6 +1169,8 @@ class TTUGradeScraper {
         const outputFile = "TTU_grade_distribution.html";
         const outputPath = path.join(this.outputDir, outputFile);
         const templatePath = path.join(__dirname, "analytics-template.html");
+        const compareOutputPath = path.join(this.outputDir, "TTU_professor_compare.html");
+        const compareTemplatePath = path.join(__dirname, "compare-template.html");
 
         const safeJSON = value => JSON.stringify(value)
             .replace(/</g, "\\u003c")
@@ -1037,6 +1185,13 @@ class TTUGradeScraper {
         html = html.replace("__ALL_ROWS_JSON__", allRowsJSON);
 
         fs.writeFileSync(outputPath, html, "utf8");
+
+        if (fs.existsSync(compareTemplatePath)) {
+            let compareHTML = fs.readFileSync(compareTemplatePath, "utf8");
+            compareHTML = compareHTML.replace("__DATA_JSON__", dataJSON);
+            fs.writeFileSync(compareOutputPath, compareHTML, "utf8");
+        }
+
         return outputPath;
     }
 

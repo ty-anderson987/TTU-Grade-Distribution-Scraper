@@ -37,7 +37,7 @@ stopCmd = "powershell -NoProfile -WindowStyle Hidden -Command """ & _
 
 shell.Run stopCmd, 0, True
 
-' Fallback for a stale/crashed copy of this exact V2.6 folder.
+' Fallback for a stale/crashed copy of this exact V2.8 folder.
 pidFile = root & "\.server.pid"
 If fso.FileExists(pidFile) Then
     On Error Resume Next

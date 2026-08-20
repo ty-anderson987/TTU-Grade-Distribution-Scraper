@@ -17,29 +17,36 @@ header{background:#111;color:#fff;border-bottom:4px solid var(--red)}
 .header-wrap{max-width:1680px;margin:0 auto;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
 header h1{margin:0 0 5px;font-size:27px} header p{margin:0;color:#d3d3d3}
 main{max-width:1680px;margin:0 auto;padding:20px 22px 34px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;margin-bottom:16px;overflow:hidden}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;margin-bottom:16px;overflow:visible}
 .card-head{padding:14px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
 .card-head h2,.card-head h3{margin:0}.card-head h2{font-size:19px}.card-head h3{font-size:17px}.card-body{padding:16px 17px}
 .note,.muted{color:var(--muted);font-size:13px;line-height:1.45}
 button,.button-link{border:1px solid #aaa;background:#fff;color:#111;border-radius:8px;padding:8px 11px;font:inherit;font-weight:650;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 button:hover,.button-link:hover{background:#eee}.primary{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important}.primary:hover{background:var(--red-dark)!important}
-.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.header-actions .button-link{background:#fff;border-color:#fff}
-.filters{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px}
-label{display:block;font-size:13px;color:var(--muted)}select,input[type="search"]{width:100%;margin-top:5px;border:1px solid #aaa;border-radius:8px;padding:9px 10px;background:#fff;font:inherit;color:#111}
-.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.header-actions,.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.header-actions .button-link{background:#fff;border-color:#fff}
+.filters{display:grid;grid-template-columns:repeat(4,minmax(180px,1fr)) minmax(190px,1fr);gap:10px;align-items:end}
+.filter-block>label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px}
+input[type="search"]{width:100%;border:1px solid #aaa;border-radius:8px;padding:10px;background:#fff;font:inherit;color:#111}
+.multi-dropdown{position:relative}
+.multi-dropdown>summary{list-style:none;border:1px solid #aaa;border-radius:8px;padding:9px 10px;background:#fff;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:40px}
+.multi-dropdown>summary::-webkit-details-marker{display:none}.multi-dropdown[open]>summary{border-color:var(--red);box-shadow:0 0 0 2px rgba(204,0,0,.12)}
+.multi-panel{position:absolute;z-index:50;top:calc(100% + 5px);left:0;min-width:100%;width:max-content;max-width:380px;max-height:340px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 14px 35px rgba(0,0,0,.16)}
+.multi-actions{display:flex;gap:6px;padding:3px 3px 7px;position:sticky;top:-8px;background:#fff;z-index:2}.multi-actions button{padding:5px 8px;font-size:12px}
+.check-list{display:grid;gap:2px;min-width:230px}.check-row{display:flex;align-items:center;gap:8px;padding:7px 6px;border-radius:6px;cursor:pointer}.check-row:hover{background:#f4f4f5}.check-row input{margin:0}
 .metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.metric{background:#fff;border:1px solid var(--line);border-radius:11px;padding:13px 14px}.metric span{color:var(--muted);font-size:12px}.metric strong{display:block;margin-top:5px;font-size:24px}
 .table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e0e0e0;padding:9px 10px;text-align:right;white-space:nowrap}th{background:#ededed;font-weight:700;position:sticky;top:0;z-index:1}th.left,td.left{text-align:left}th.sortable{cursor:pointer;user-select:none}th.sortable:hover{background:#e2e2e2}.rank{text-align:center;font-weight:750}
 .icon-btn{width:32px;height:32px;padding:0;border-radius:999px;font-size:17px;line-height:1}.icon-cell{text-align:center}.rmp-link{padding:6px 9px;font-size:12px}.empty{padding:18px;text-align:left;color:var(--muted)}
+.subject-stack{display:grid;gap:12px}.subject-block{border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#fff}.subject-title{padding:11px 13px;background:var(--soft);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.subject-title strong{font-size:17px}.subject-title span{font-size:12px;color:var(--muted)}.course-ranking-stack{display:grid;gap:12px;padding:12px}.course-ranking-block{border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#fff}.course-ranking-title{padding:9px 11px;background:#fafafa;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.course-ranking-title strong{font-size:15px}.course-ranking-title span{font-size:12px;color:var(--muted)}
 .detail-panel{display:none}.detail-panel.visible{display:block}.detail-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}.detail-title{margin:0;font-size:25px}.detail-subtitle{margin-top:5px;color:var(--muted)}
+.detail-filter-wrap{margin-top:14px;border:1px solid var(--line);border-radius:10px;background:var(--soft);padding:11px 12px}.detail-filter-title{font-weight:750;margin-bottom:8px}.detail-filters{display:grid;grid-template-columns:repeat(2,minmax(220px,360px));gap:10px}.detail-filters .filter-block>label{color:var(--muted)}
 .profile-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-top:15px}.profile-metric{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:11px 12px}.profile-metric span{display:block;color:var(--muted);font-size:12px}.profile-metric strong{display:block;margin-top:4px;font-size:20px}
 .chart-grid{display:grid;grid-template-columns:1.4fr .8fr;gap:14px;margin-top:14px}.chart-card{border:1px solid var(--line);border-radius:11px;padding:14px;background:#fff;min-width:0}.chart-title{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:8px;flex-wrap:wrap}.chart-title h3{margin:0;font-size:16px}.chart-title span{font-size:12px;color:var(--muted)}#gradeCurveSvg{display:block;width:100%;height:auto}
 .donut-wrap{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}.donut{width:145px;height:145px;border-radius:50%;position:relative;background:#eee}.donut::after{content:"";position:absolute;inset:27px;background:#fff;border-radius:50%;border:1px solid #eee}.donut-center{position:absolute;inset:0;display:grid;place-items:center;z-index:2;text-align:center;pointer-events:none}.donut-center strong{font-size:20px}.donut-center span{display:block;font-size:11px;color:var(--muted);margin-top:2px}.legend{display:grid;gap:7px}.legend-row{display:grid;grid-template-columns:10px 24px 1fr auto;align-items:center;gap:7px;font-size:13px}.swatch{width:10px;height:10px;border-radius:2px}
 .history{margin-top:14px;border:1px solid var(--line);border-radius:11px;overflow:hidden}.history .card-head{border-bottom:1px solid var(--line)}
-.summary-row{font-weight:700;background:#f2f2f2}.error-row{background:#fff0f0;color:var(--bad)}details summary{cursor:pointer;font-weight:700}.raw-tools{display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px;flex-wrap:wrap}
-.badge{display:inline-block;border-radius:999px;background:#eee;padding:3px 8px;font-size:12px}.adjust-note{margin-top:10px;padding:9px 11px;background:#fafafa;border:1px solid #e5e5e5;border-radius:8px}
+.summary-row{font-weight:700;background:#f2f2f2}.error-row{background:#fff0f0;color:var(--bad)}details summary{cursor:pointer}.adjust-note{margin-top:10px;padding:9px 11px;background:#fafafa;border:1px solid #e5e5e5;border-radius:8px}
 footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);font-size:13px}
-@media(max-width:1050px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.chart-grid{grid-template-columns:1fr}}
-@media(max-width:650px){main{padding:12px}.header-wrap{padding:17px 14px}.filters,.profile-metrics,.metrics{grid-template-columns:1fr 1fr}.donut-wrap{grid-template-columns:1fr;justify-items:center}}
+@media(max-width:1100px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.chart-grid{grid-template-columns:1fr}.detail-filters{grid-template-columns:1fr 1fr}}
+@media(max-width:650px){main{padding:12px}.header-wrap{padding:17px 14px}.filters,.profile-metrics,.metrics,.detail-filters{grid-template-columns:1fr}.donut-wrap{grid-template-columns:1fr;justify-items:center}.multi-panel{width:min(90vw,350px)}}
 </style>
 </head>
 <body>
@@ -52,16 +59,16 @@ footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);fon
 <main>
   <section class="card">
     <div class="card-head">
-      <div><h2>Explore</h2><div class="note">Nothing opens automatically. Use the ↗ icon beside a professor or course when you want a detailed analysis.</div></div>
+      <div><h2>Explore</h2><div class="note">Filters support multiple selections. Use the ↗ icon beside a professor or course to open a detailed analysis.</div></div>
       <div class="actions"><button id="resetFilters">Reset filters</button><button id="exportCsv" class="primary">Export filtered CSV</button></div>
     </div>
     <div class="card-body">
       <div class="filters">
-        <label>Term<select id="termFilter"></select></label>
-        <label>Subject<select id="subjectFilter"></select></label>
-        <label>Course<select id="courseFilter"></select></label>
-        <label>Professor<select id="professorFilter"></select></label>
-        <label>Search<input id="searchFilter" type="search" placeholder="Professor, course, subject..."></label>
+        <div id="termFilterWrap" class="filter-block"></div>
+        <div id="subjectFilterWrap" class="filter-block"></div>
+        <div id="courseFilterWrap" class="filter-block"></div>
+        <div id="professorFilterWrap" class="filter-block"></div>
+        <div class="filter-block"><label for="searchFilter">Search</label><input id="searchFilter" type="search" placeholder="Professor, course, subject..."></div>
       </div>
     </div>
   </section>
@@ -77,8 +84,14 @@ footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);fon
     <div class="card-body">
       <div class="detail-hero">
         <div><h2 id="detailTitle" class="detail-title"></h2><div id="detailSubtitle" class="detail-subtitle"></div></div>
-        <div class="actions"><a id="detailRmpLink" class="button-link primary" target="_blank" rel="noopener noreferrer">RMP ↗</a><button id="closeDetail">Close analysis</button></div>
+        <div class="actions"><a id="detailCompareLink" class="button-link primary" href="#">Compare professors</a><a id="detailRmpLink" class="button-link primary" target="_blank" rel="noopener noreferrer">RMP ↗</a><button id="closeDetail">Close analysis</button></div>
       </div>
+
+      <div class="detail-filter-wrap">
+        <div class="detail-filter-title">Filter this analysis</div>
+        <div id="detailFilters" class="detail-filters"></div>
+      </div>
+
       <div class="profile-metrics">
         <div class="profile-metric"><span>Estimated GPA</span><strong id="detailGPA">—</strong></div>
         <div class="profile-metric"><span>A rate</span><strong id="detailA">—</strong></div>
@@ -87,6 +100,7 @@ footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);fon
         <div class="profile-metric"><span>Students</span><strong id="detailStudents">—</strong></div>
         <div class="profile-metric"><span id="detailCountLabel">Sections</span><strong id="detailCount">—</strong></div>
       </div>
+
       <div class="chart-grid">
         <div class="chart-card">
           <div class="chart-title"><h3>Estimated grade distribution</h3><span>Estimate from A/B/C/D/F buckets</span></div>
@@ -101,6 +115,7 @@ footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);fon
           </div>
         </div>
       </div>
+
       <div class="history">
         <div class="card-head"><h3 id="historyTitle">History</h3></div>
         <div class="table-wrap"><table id="historyTable"><thead></thead><tbody></tbody></table></div>
@@ -109,22 +124,17 @@ footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);fon
   </section>
 
   <section class="card">
-    <div class="card-head"><div><h2>Professor rankings</h2><div class="note">Aggregated across the current filters. Adjusted GPA accounts for class size and course context.</div></div></div>
-    <div class="table-wrap"><table id="professorTable"><thead><tr>
-      <th class="left sortable" data-key="instructor">Professor</th><th class="sortable" data-key="courses">Course-term pairs</th><th class="sortable" data-key="terms">Terms</th><th class="sortable" data-key="students">Students</th><th class="sortable" data-key="gpa">GPA</th><th class="sortable" data-key="adjustedGpa">Adjusted GPA</th><th class="sortable" data-key="aRate">A %</th><th class="sortable" data-key="dfwRate">DFW %</th><th>View</th><th>RMP</th>
-    </tr></thead><tbody></tbody></table></div>
-    <div class="card-body"><div class="adjust-note note"><strong>Adjusted GPA:</strong> each professor/course/term result is shrunk toward that course-term average with a 25-student prior, then combined using the number of graded students. This reduces tiny-class outliers without ignoring large classes.</div></div>
+    <div class="card-head"><div><h2>Professor rankings by subject and course</h2><div class="note">Each course is ranked independently inside its subject. A professor who teaches multiple courses receives a separate ranking for each course using only that course's data.</div></div></div>
+    <div class="card-body"><div id="professorGroups" class="subject-stack"></div><div class="adjust-note note"><strong>Adjusted GPA:</strong> rankings are calculated separately for each course. Each professor/course/term result is shrunk toward that course-term average with a 25-student prior, then the selected terms for that same course are combined using the number of graded students. Data from other courses is never mixed into that course's ranking.</div></div>
   </section>
 
   <section class="card">
-    <div class="card-head"><div><h2>Courses</h2><div class="note">One row per subject + course. Use ↗ to see every scraped term and professor for that course.</div></div></div>
-    <div class="table-wrap"><table id="courseTable"><thead><tr>
-      <th class="left sortable" data-key="subject">Subject</th><th class="left sortable" data-key="course">Course</th><th class="sortable" data-key="terms">Terms</th><th class="sortable" data-key="professors">Professors</th><th class="sortable" data-key="students">Students</th><th class="sortable" data-key="gpa">GPA</th><th class="sortable" data-key="aRate">A %</th><th class="sortable" data-key="dfwRate">DFW %</th><th>View</th>
-    </tr></thead><tbody></tbody></table></div>
+    <div class="card-head"><div><h2>Courses by subject</h2><div class="note">Subjects are separated first, then each course is shown inside its subject. Use ↗ for course-level analysis.</div></div></div>
+    <div class="card-body"><div id="courseGroups" class="subject-stack"></div></div>
   </section>
 
   <section class="card">
-    <div class="card-head"><div><h2>Professor by course and term</h2><div class="note">Fairer same-course comparisons. Ranking defaults to sample-size-adjusted GPA within each term + course.</div></div></div>
+    <div class="card-head"><div><h2>Professor by course and term</h2><div class="note">Same-course comparisons using sample-size-adjusted GPA within each term and course.</div></div></div>
     <div class="table-wrap"><table id="detailRanking"><thead><tr>
       <th>#</th><th class="left sortable" data-key="term">Term</th><th class="left sortable" data-key="subject">Subject</th><th class="left sortable" data-key="course">Course</th><th class="left sortable" data-key="instructor">Professor</th><th class="sortable" data-key="students">Students</th><th class="sortable" data-key="gpa">GPA</th><th class="sortable" data-key="adjustedGpa">Adjusted GPA</th><th class="sortable" data-key="aRate">A %</th><th class="sortable" data-key="dfwRate">DFW %</th><th>View</th>
     </tr></thead><tbody></tbody></table></div>
@@ -132,10 +142,11 @@ footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);fon
 
   <section class="card">
     <div class="card-head"><h2>Raw Cognos data</h2></div>
-    <div class="card-body"><details><summary>Show raw rows</summary><div class="table-wrap" style="margin-top:12px"><table id="rawTable"><thead><tr><th class="left">Term</th><th class="left">Subject</th><th class="left">Course</th><th class="left">Instructor</th><th>Section</th><th>A</th><th>B</th><th>C</th><th>D</th><th>F</th><th>I</th><th>CR</th><th>P</th><th>NC</th><th>PR</th><th>W</th><th>O</th></tr></thead><tbody></tbody></table></div></details></div>
+    <div class="card-body"><details><summary><strong>Show raw rows</strong></summary><div class="table-wrap" style="margin-top:12px"><table id="rawTable"><thead><tr><th class="left">Term</th><th class="left">Subject</th><th class="left">Course</th><th class="left">Instructor</th><th>Section</th><th>A</th><th>B</th><th>C</th><th>D</th><th>F</th><th>I</th><th>CR</th><th>P</th><th>NC</th><th>PR</th><th>W</th><th>O</th></tr></thead><tbody></tbody></table></div></details></div>
   </section>
 </main>
 <footer>Grade curves are estimates from letter-grade buckets. Historical grade distributions are useful context, but they do not establish instructor quality by themselves.</footer>
+
 <script>
 const DATA = __DATA_JSON__;
 const ALL_ROWS = __ALL_ROWS_JSON__;
@@ -145,45 +156,393 @@ const COLORS={A:'#18794e',B:'#2463a9',C:'#7451a6',D:'#a15c00',F:'#b42318'};
 const $=id=>document.getElementById(id);
 const num=v=>Number(v)||0;
 const uniq=arr=>Array.from(new Set(arr.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
-const state={profSort:{key:'adjustedGpa',dir:-1},courseSort:{key:'course',dir:1},detailSort:{key:'adjustedGpa',dir:-1},detail:null};
-function pct(n,d){return d?100*n/d:null} function fp(v){return v==null?'—':v.toFixed(1)+'%'} function fg(v){return v==null?'—':v.toFixed(2)}
+const courseKey=(subject,course)=>String(subject||'')+'||'+String(course||'');
+const state={
+    filters:{term:new Set(),subject:new Set(),course:new Set(),instructor:new Set()},
+    filterOptions:{term:[],subject:[],course:[],instructor:[]},
+    profSort:{key:'adjustedGpa',dir:-1},courseSort:{key:'course',dir:1},detailSort:{key:'adjustedGpa',dir:-1},
+    detail:null
+};
+
+function pct(n,d){return d?100*n/d:null}
+function fp(v){return v==null?'—':v.toFixed(1)+'%'}
+function fg(v){return v==null?'—':v.toFixed(2)}
 function addCounts(t,r){['A','B','C','D','F','I','CR','P','NC','PR','W','O'].forEach(k=>t[k]=(t[k]||0)+num(r[k]))}
-function finalize(x){const letters=num(x.A)+num(x.B)+num(x.C)+num(x.D)+num(x.F);const dfwDen=letters+num(x.W);x.gpaN=letters;x.students=['A','B','C','D','F','I','CR','P','NC','PR','W','O'].reduce((s,k)=>s+num(x[k]),0);x.aRate=pct(num(x.A),letters);x.abcRate=pct(num(x.A)+num(x.B)+num(x.C),letters);x.dfwRate=pct(num(x.D)+num(x.F)+num(x.W),dfwDen);x.gpa=letters?(4*num(x.A)+3*num(x.B)+2*num(x.C)+num(x.D))/letters:null;return x}
+function finalize(x){
+    const letters=num(x.A)+num(x.B)+num(x.C)+num(x.D)+num(x.F);
+    const dfwDen=letters+num(x.W);
+    x.gpaN=letters;
+    x.students=['A','B','C','D','F','I','CR','P','NC','PR','W','O'].reduce((s,k)=>s+num(x[k]),0);
+    x.aRate=pct(num(x.A),letters);
+    x.abcRate=pct(num(x.A)+num(x.B)+num(x.C),letters);
+    x.dfwRate=pct(num(x.D)+num(x.F)+num(x.W),dfwDen);
+    x.gpa=letters?(4*num(x.A)+3*num(x.B)+2*num(x.C)+num(x.D))/letters:null;
+    return x;
+}
 function termValue(term){const m=String(term||'').match(/(Spring|Summer|Fall|Winter)\s+(\d{4})/i);if(!m)return 0;const season={winter:0,spring:1,summer:2,fall:3}[m[1].toLowerCase()]??0;return Number(m[2])*10+season}
 function displayName(name){const s=String(name||'').trim();if(!s.includes(','))return s;const p=s.split(',');return (p.slice(1).join(',').trim()+' '+p[0].trim()).trim()}
 function rmpUrl(name){return 'https://www.ratemyprofessors.com/search/professors/'+RMP_SCHOOL_ID+'?q='+encodeURIComponent(displayName(name))}
-function filters(){return{term:$('termFilter').value,subject:$('subjectFilter').value,course:$('courseFilter').value,instructor:$('professorFilter').value,search:$('searchFilter').value.trim().toLowerCase()}}
-function matches(r,f){if(f.term&&r.term!==f.term)return false;if(f.subject&&r.subject!==f.subject)return false;if(f.course&&r.course!==f.course)return false;if(f.instructor&&r.instructor!==f.instructor)return false;if(f.search&&!([r.term,r.subject,r.course,r.instructor,r.section].join(' ').toLowerCase().includes(f.search)))return false;return true}
-function filtered(){const f=filters();return DATA.filter(r=>matches(r,f))}
-function fillSelect(id,values,label){const el=$(id),old=el.value;el.innerHTML='';const o=document.createElement('option');o.value='';o.textContent=label;el.appendChild(o);uniq(values).forEach(v=>{const x=document.createElement('option');x.value=v;x.textContent=v;el.appendChild(x)});if([...el.options].some(o=>o.value===old))el.value=old}
-function refreshFilters(){const f=filters();const tr=DATA.filter(r=>!f.term||r.term===f.term);const sr=tr.filter(r=>!f.subject||r.subject===f.subject);const cr=sr.filter(r=>!f.course||r.course===f.course);fillSelect('subjectFilter',tr.map(r=>r.subject),'All subjects');fillSelect('courseFilter',sr.map(r=>r.course),'All courses');fillSelect('professorFilter',cr.map(r=>r.instructor),'All professors')}
-function detailed(rows){const map=new Map();rows.forEach(r=>{const k=[r.term,r.subject,r.course,r.instructor].join('||');if(!map.has(k))map.set(k,{term:r.term,subject:r.subject,course:r.course,instructor:r.instructor,sectionsSet:new Set()});const x=map.get(k);x.sectionsSet.add(r.section||'');addCounts(x,r)});const items=Array.from(map.values()).map(x=>{x.sections=x.sectionsSet.size;delete x.sectionsSet;return finalize(x)});const groups=new Map();items.forEach(x=>{const k=[x.term,x.subject,x.course].join('||');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)});groups.forEach(g=>{let n=0,p=0;g.forEach(x=>{if(x.gpa!=null){n+=x.gpaN;p+=x.gpa*x.gpaN}});const mean=n?p/n:null;g.forEach(x=>{x.courseMean=mean;x.adjustedGpa=x.gpa==null?null:(x.gpaN/(x.gpaN+PRIOR_N))*x.gpa+(PRIOR_N/(x.gpaN+PRIOR_N))*mean});g.sort((a,b)=>(b.adjustedGpa??-1)-(a.adjustedGpa??-1)||(b.gpa??-1)-(a.gpa??-1)||(b.students-a.students));g.forEach((x,i)=>x.rank=i+1)});return items}
-function professors(rows){const det=detailed(rows),map=new Map();det.forEach(d=>{const k=d.instructor||'Unknown';if(!map.has(k))map.set(k,{instructor:k,termsSet:new Set(),coursesSet:new Set(),sections:0,adjNum:0,adjDen:0});const x=map.get(k);x.termsSet.add(d.term);x.coursesSet.add([d.term,d.subject,d.course].join('||'));x.sections+=d.sections;addCounts(x,d);if(d.adjustedGpa!=null&&d.gpaN){x.adjNum+=d.adjustedGpa*d.gpaN;x.adjDen+=d.gpaN}});return Array.from(map.values()).map(x=>{x.terms=x.termsSet.size;x.courses=x.coursesSet.size;x.adjustedGpa=x.adjDen?x.adjNum/x.adjDen:null;delete x.termsSet;delete x.coursesSet;delete x.adjNum;delete x.adjDen;return finalize(x)})}
-function courses(rows){const map=new Map();rows.forEach(r=>{const k=[r.subject,r.course].join('||');if(!map.has(k))map.set(k,{subject:r.subject,course:r.course,termsSet:new Set(),profSet:new Set()});const x=map.get(k);x.termsSet.add(r.term);x.profSet.add(r.instructor);addCounts(x,r)});return Array.from(map.values()).map(x=>{x.terms=x.termsSet.size;x.professors=x.profSet.size;delete x.termsSet;delete x.profSet;return finalize(x)})}
-function aggregate(rows){const x={sectionsSet:new Set()};rows.forEach(r=>{x.sectionsSet.add([r.term,r.subject,r.course,r.section].join('||'));addCounts(x,r)});x.sections=x.sectionsSet.size;delete x.sectionsSet;return finalize(x)}
-function cmp(a,b,key,dir){const av=a[key],bv=b[key];if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return-1;if(typeof av==='number'&&typeof bv==='number')return(av-bv)*dir;return String(av).localeCompare(String(bv),undefined,{numeric:true})*dir}
+function compareUrl(subject,course,terms=[],profs=[]){const q=new URLSearchParams();q.set('subject',subject||'');q.set('course',course||'');if(terms.length)q.set('terms',terms.map(encodeURIComponent).join('~'));if(profs.length)q.set('profs',profs.map(encodeURIComponent).join('~'));return 'TTU_professor_compare.html?'+q.toString()}
 function td(text,cls){const e=document.createElement('td');e.textContent=text;if(cls)e.className=cls;return e}
 function icon(handler,title){const b=document.createElement('button');b.type='button';b.className='icon-btn';b.textContent='↗';b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',handler);return b}
 function linkRmp(name){const a=document.createElement('a');a.className='button-link rmp-link';a.href=rmpUrl(name);a.target='_blank';a.rel='noopener noreferrer';a.textContent='RMP ↗';return a}
-function renderMetrics(rows){const p=new Set(rows.map(r=>r.instructor).filter(Boolean)).size,c=new Set(rows.map(r=>[r.subject,r.course].join('||'))).size,agg=aggregate(rows);$('metricProfessors').textContent=p.toLocaleString();$('metricCourses').textContent=c.toLocaleString();$('metricStudents').textContent=agg.students.toLocaleString();$('metricGPA').textContent=fg(agg.gpa)}
-function renderProfessors(rows){let items=professors(rows);items.sort((a,b)=>cmp(a,b,state.profSort.key,state.profSort.dir));const body=$('professorTable').querySelector('tbody');body.innerHTML='';if(!items.length){const tr=document.createElement('tr'),c=td('No professors match these filters.','empty');c.colSpan=10;tr.appendChild(c);body.appendChild(tr);return}items.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.instructor,'left'),td(x.courses),td(x.terms),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));tr.appendChild(v);const r=document.createElement('td');r.appendChild(linkRmp(x.instructor));tr.appendChild(r);body.appendChild(tr)})}
-function renderCourses(rows){let items=courses(rows);items.sort((a,b)=>cmp(a,b,state.courseSort.key,state.courseSort.dir));const body=$('courseTable').querySelector('tbody');body.innerHTML='';if(!items.length){const tr=document.createElement('tr'),c=td('No courses match these filters.','empty');c.colSpan=9;tr.appendChild(c);body.appendChild(tr);return}items.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.subject,'left'),td(x.course,'left'),td(x.terms),td(x.professors),td(x.students),td(fg(x.gpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openCourse(x.subject,x.course),'Analyze course'));tr.appendChild(v);body.appendChild(tr)})}
+function cmp(a,b,key,dir){const av=a[key],bv=b[key];if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return-1;if(typeof av==='number'&&typeof bv==='number')return(av-bv)*dir;return String(av).localeCompare(String(bv),undefined,{numeric:true})*dir}
+
+function detailed(rows){
+    const map=new Map();
+    rows.forEach(r=>{
+        const k=[r.term,r.subject,r.course,r.instructor].join('||');
+        if(!map.has(k))map.set(k,{term:r.term,subject:r.subject,course:r.course,instructor:r.instructor,sectionsSet:new Set()});
+        const x=map.get(k);x.sectionsSet.add(r.section||'');addCounts(x,r);
+    });
+    const items=Array.from(map.values()).map(x=>{x.sections=x.sectionsSet.size;delete x.sectionsSet;return finalize(x)});
+    const groups=new Map();
+    items.forEach(x=>{const k=[x.term,x.subject,x.course].join('||');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)});
+    groups.forEach(g=>{
+        let n=0,p=0;g.forEach(x=>{if(x.gpa!=null){n+=x.gpaN;p+=x.gpa*x.gpaN}});const mean=n?p/n:null;
+        g.forEach(x=>{x.courseMean=mean;x.adjustedGpa=x.gpa==null?null:(x.gpaN/(x.gpaN+PRIOR_N))*x.gpa+(PRIOR_N/(x.gpaN+PRIOR_N))*mean});
+        g.sort((a,b)=>(b.adjustedGpa??-1)-(a.adjustedGpa??-1)||(b.gpa??-1)-(a.gpa??-1)||(b.students-a.students));g.forEach((x,i)=>x.rank=i+1);
+    });
+    return items;
+}
+function professors(rows){
+    const det=detailed(rows),map=new Map();
+    det.forEach(d=>{
+        const k=d.instructor||'Unknown';
+        if(!map.has(k))map.set(k,{instructor:k,termsSet:new Set(),coursesSet:new Set(),sections:0,adjNum:0,adjDen:0});
+        const x=map.get(k);x.termsSet.add(d.term);x.coursesSet.add([d.term,d.subject,d.course].join('||'));x.sections+=d.sections;addCounts(x,d);
+        if(d.adjustedGpa!=null&&d.gpaN){x.adjNum+=d.adjustedGpa*d.gpaN;x.adjDen+=d.gpaN}
+    });
+    return Array.from(map.values()).map(x=>{x.terms=x.termsSet.size;x.courses=x.coursesSet.size;x.adjustedGpa=x.adjDen?x.adjNum/x.adjDen:null;delete x.termsSet;delete x.coursesSet;delete x.adjNum;delete x.adjDen;return finalize(x)});
+}
+function courses(rows){
+    const map=new Map();
+    rows.forEach(r=>{const k=courseKey(r.subject,r.course);if(!map.has(k))map.set(k,{subject:r.subject,course:r.course,termsSet:new Set(),profSet:new Set()});const x=map.get(k);x.termsSet.add(r.term);x.profSet.add(r.instructor);addCounts(x,r)});
+    return Array.from(map.values()).map(x=>{x.terms=x.termsSet.size;x.professors=x.profSet.size;delete x.termsSet;delete x.profSet;return finalize(x)});
+}
+function aggregate(rows){const x={sectionsSet:new Set()};rows.forEach(r=>{x.sectionsSet.add([r.term,r.subject,r.course,r.section].join('||'));addCounts(x,r)});x.sections=x.sectionsSet.size;delete x.sectionsSet;return finalize(x)}
+
+function createMultiDropdown({id,label,items,selected,onChange,allText}){
+    const wrap=document.createElement('div');wrap.className='filter-block';
+    const lab=document.createElement('label');lab.textContent=label;wrap.appendChild(lab);
+    const details=document.createElement('details');details.className='multi-dropdown';details.id=id;
+    const summary=document.createElement('summary');const summaryText=document.createElement('span');const arrow=document.createElement('span');arrow.textContent='▾';summary.append(summaryText,arrow);details.appendChild(summary);
+    const panel=document.createElement('div');panel.className='multi-panel';
+    const actions=document.createElement('div');actions.className='multi-actions';
+    const all=document.createElement('button');all.type='button';all.textContent='Select all';
+    const none=document.createElement('button');none.type='button';none.textContent='Clear';actions.append(all,none);panel.appendChild(actions);
+    const list=document.createElement('div');list.className='check-list';panel.appendChild(list);details.appendChild(panel);wrap.appendChild(details);
+
+    const updateSummary=()=>{
+        const total=items.length,n=selected.size;
+        if(!total)summaryText.textContent='No options';
+        else if(n===total)summaryText.textContent=allText||`All ${label.toLowerCase()}`;
+        else if(n===0)summaryText.textContent=`No ${label.toLowerCase()}`;
+        else if(n===1){const only=items.find(x=>selected.has(x.value));summaryText.textContent=only?only.label:`1 ${label.toLowerCase()}`;}
+        else summaryText.textContent=`${n} selected`;
+    };
+    const sync=()=>{list.querySelectorAll('input').forEach(i=>i.checked=selected.has(i.value));updateSummary()};
+    items.forEach(item=>{
+        const row=document.createElement('label');row.className='check-row';const input=document.createElement('input');input.type='checkbox';input.value=item.value;input.checked=selected.has(item.value);const span=document.createElement('span');span.textContent=item.label;row.append(input,span);list.appendChild(row);
+        input.addEventListener('change',()=>{if(input.checked)selected.add(item.value);else selected.delete(item.value);updateSummary();onChange()});
+    });
+    all.addEventListener('click',e=>{e.preventDefault();items.forEach(i=>selected.add(i.value));sync();onChange()});
+    none.addEventListener('click',e=>{e.preventDefault();selected.clear();sync();onChange()});
+    updateSummary();
+    return wrap;
+}
+
+function initializeGlobalFilters(){
+    state.filterOptions.term=uniq(DATA.map(r=>r.term)).sort((a,b)=>termValue(b)-termValue(a)).map(v=>({value:v,label:v}));
+    state.filterOptions.subject=uniq(DATA.map(r=>r.subject)).map(v=>({value:v,label:v}));
+    state.filterOptions.course=uniq(DATA.map(r=>courseKey(r.subject,r.course))).map(v=>{const [subject,course]=v.split('||');return{value:v,label:`${subject} — ${course}`}});
+    state.filterOptions.instructor=uniq(DATA.map(r=>r.instructor)).map(v=>({value:v,label:v}));
+    Object.keys(state.filters).forEach(k=>state.filterOptions[k].forEach(x=>state.filters[k].add(x.value)));
+    renderGlobalFilterControls();
+}
+function renderGlobalFilterControls(){
+    const configs=[
+        ['termFilterWrap','termFilter','Term',state.filterOptions.term,state.filters.term,'All terms'],
+        ['subjectFilterWrap','subjectFilter','Subject',state.filterOptions.subject,state.filters.subject,'All subjects'],
+        ['courseFilterWrap','courseFilter','Course',state.filterOptions.course,state.filters.course,'All courses'],
+        ['professorFilterWrap','professorFilter','Professor',state.filterOptions.instructor,state.filters.instructor,'All professors']
+    ];
+    configs.forEach(([wrapId,id,label,items,selected,allText])=>{const host=$(wrapId);host.innerHTML='';host.appendChild(createMultiDropdown({id,label,items,selected,onChange:render,allText}))});
+}
+function globalMatches(r){
+    if(!state.filters.term.has(r.term))return false;
+    if(!state.filters.subject.has(r.subject))return false;
+    if(!state.filters.course.has(courseKey(r.subject,r.course)))return false;
+    if(!state.filters.instructor.has(r.instructor))return false;
+    const search=$('searchFilter').value.trim().toLowerCase();
+    if(search&&!([r.term,r.subject,r.course,r.instructor,r.section].join(' ').toLowerCase().includes(search)))return false;
+    return true;
+}
+function filtered(){return DATA.filter(globalMatches)}
+
+function renderMetrics(rows){const p=new Set(rows.map(r=>r.instructor).filter(Boolean)).size,c=new Set(rows.map(r=>courseKey(r.subject,r.course))).size,agg=aggregate(rows);$('metricProfessors').textContent=p.toLocaleString();$('metricCourses').textContent=c.toLocaleString();$('metricStudents').textContent=agg.students.toLocaleString();$('metricGPA').textContent=fg(agg.gpa)}
+
+function subjectBlock(subject,meta){const block=document.createElement('div');block.className='subject-block';const title=document.createElement('div');title.className='subject-title';const strong=document.createElement('strong');strong.textContent=subject;const span=document.createElement('span');span.textContent=meta||'';title.append(strong,span);block.appendChild(title);return block}
+function tableWithHeader(headers){const wrap=document.createElement('div');wrap.className='table-wrap';const table=document.createElement('table');const thead=document.createElement('thead');const tr=document.createElement('tr');headers.forEach(h=>{const th=document.createElement('th');th.textContent=h.label;th.className=(h.left?'left ':'')+(h.key?'sortable':'');if(h.key)th.dataset.key=h.key;tr.appendChild(th)});thead.appendChild(tr);table.appendChild(thead);const body=document.createElement('tbody');table.appendChild(body);wrap.appendChild(table);return{wrap,table,body}}
+
+function renderProfessorGroups(rows){
+    const host=$('professorGroups');
+    host.innerHTML='';
+    const subjects=uniq(rows.map(r=>r.subject));
+
+    if(!subjects.length){
+        host.appendChild(Object.assign(document.createElement('div'),{
+            className:'empty',
+            textContent:'No professors match these filters.'
+        }));
+        return;
+    }
+
+    subjects.forEach(subject=>{
+        const subjectRows=rows.filter(r=>r.subject===subject);
+        const courseNames=uniq(subjectRows.map(r=>r.course)).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
+        const subjectProfessorCount=new Set(subjectRows.map(r=>r.instructor)).size;
+        const subjectBlockEl=subjectBlock(
+            subject,
+            `${subjectProfessorCount} professor(s) · ${courseNames.length} course(s)`
+        );
+
+        const courseStack=document.createElement('div');
+        courseStack.className='course-ranking-stack';
+
+        courseNames.forEach(course=>{
+            // IMPORTANT: only rows from THIS course are used to calculate this ranking.
+            // This keeps professors who teach multiple courses as separate course-specific entries.
+            const courseRows=subjectRows.filter(r=>r.course===course);
+            let items=professors(courseRows);
+            items.sort((a,b)=>cmp(a,b,state.profSort.key,state.profSort.dir));
+
+            const courseBlock=document.createElement('div');
+            courseBlock.className='course-ranking-block';
+
+            const courseTitle=document.createElement('div');
+            courseTitle.className='course-ranking-title';
+
+            const strong=document.createElement('strong');
+            strong.textContent=course;
+
+            const meta=document.createElement('span');
+            meta.textContent=`${items.length} professor(s) · ${new Set(courseRows.map(r=>r.term)).size} term(s)`;
+
+            const titleActions=document.createElement('div');titleActions.className='actions';const compare=document.createElement('a');compare.className='button-link';compare.href=compareUrl(subject,course,uniq(courseRows.map(r=>r.term)).sort((a,b)=>termValue(b)-termValue(a)),uniq(courseRows.map(r=>r.instructor)).slice(0,4));compare.textContent='Compare';titleActions.append(meta,compare);courseTitle.append(strong,titleActions);
+            courseBlock.appendChild(courseTitle);
+
+            const headers=[
+                {label:'#'},
+                {label:'Professor',key:'instructor',left:true},
+                {label:'Terms',key:'terms'},
+                {label:'Students',key:'students'},
+                {label:'GPA',key:'gpa'},
+                {label:'Adjusted GPA',key:'adjustedGpa'},
+                {label:'A %',key:'aRate'},
+                {label:'DFW %',key:'dfwRate'},
+                {label:'View'},
+                {label:'RMP'}
+            ];
+
+            const t=tableWithHeader(headers);
+            t.table.dataset.sortGroup='professor';
+
+            items.forEach((x,index)=>{
+                const tr=document.createElement('tr');
+                tr.append(
+                    td(index+1,'rank'),
+                    td(x.instructor,'left'),
+                    td(x.terms),
+                    td(x.students),
+                    td(fg(x.gpa)),
+                    td(fg(x.adjustedGpa)),
+                    td(fp(x.aRate)),
+                    td(fp(x.dfwRate))
+                );
+
+                const v=document.createElement('td');
+                v.className='icon-cell';
+                v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));
+                tr.appendChild(v);
+
+                const r=document.createElement('td');
+                r.appendChild(linkRmp(x.instructor));
+                tr.appendChild(r);
+
+                t.body.appendChild(tr);
+            });
+
+            courseBlock.appendChild(t.wrap);
+            courseStack.appendChild(courseBlock);
+        });
+
+        subjectBlockEl.appendChild(courseStack);
+        host.appendChild(subjectBlockEl);
+    });
+}
+function renderCourseGroups(rows){
+    const host=$('courseGroups');host.innerHTML='';const subjects=uniq(rows.map(r=>r.subject));
+    if(!subjects.length){host.appendChild(Object.assign(document.createElement('div'),{className:'empty',textContent:'No courses match these filters.'}));return}
+    subjects.forEach(subject=>{
+        const subjectRows=rows.filter(r=>r.subject===subject);let items=courses(subjectRows);items.sort((a,b)=>cmp(a,b,state.courseSort.key,state.courseSort.dir));
+        const block=subjectBlock(subject,`${items.length} course(s) · ${new Set(subjectRows.map(r=>r.term)).size} term(s)`);
+        const headers=[{label:'Course',key:'course',left:true},{label:'Terms',key:'terms'},{label:'Professors',key:'professors'},{label:'Students',key:'students'},{label:'GPA',key:'gpa'},{label:'A %',key:'aRate'},{label:'DFW %',key:'dfwRate'},{label:'View'},{label:'Compare'}];
+        const t=tableWithHeader(headers);t.table.dataset.sortGroup='course';
+        items.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.course,'left'),td(x.terms),td(x.professors),td(x.students),td(fg(x.gpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openCourse(x.subject,x.course),'Analyze course'));tr.appendChild(v);const c=document.createElement('td');c.className='icon-cell';const rowsForCourse=DATA.filter(r=>r.subject===x.subject&&r.course===x.course);const a=document.createElement('a');a.className='button-link';a.style.padding='6px 9px';a.style.fontSize='12px';a.href=compareUrl(x.subject,x.course,uniq(rowsForCourse.map(r=>r.term)).sort((a,b)=>termValue(b)-termValue(a)),uniq(rowsForCourse.map(r=>r.instructor)).slice(0,4));a.textContent='Compare';c.appendChild(a);tr.appendChild(c);t.body.appendChild(tr)});
+        block.appendChild(t.wrap);host.appendChild(block);
+    });
+}
 function renderDetailRanking(rows){let items=detailed(rows);items.sort((a,b)=>cmp(a,b,state.detailSort.key,state.detailSort.dir));const body=$('detailRanking').querySelector('tbody');body.innerHTML='';if(!items.length){const tr=document.createElement('tr'),c=td('No rows match these filters.','empty');c.colSpan=11;tr.appendChild(c);body.appendChild(tr);return}items.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.rank,'rank'),td(x.term,'left'),td(x.subject,'left'),td(x.course,'left'),td(x.instructor,'left'),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));tr.appendChild(v);body.appendChild(tr)})}
+
 function curvePath(points){if(points.length<2)return'';let d='M '+points[0][0]+' '+points[0][1];for(let i=0;i<points.length-1;i++){const p0=points[i-1]||points[i],p1=points[i],p2=points[i+1],p3=points[i+2]||p2;const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;d+=' C '+c1x+' '+c1y+', '+c2x+' '+c2y+', '+p2[0]+' '+p2[1]}return d}
 function renderCurve(xitem){const svg=$('gradeCurveSvg');svg.innerHTML='';const NS='http://www.w3.org/2000/svg',W=760,H=285,L=48,R=20,T=34,B=43,cw=W-L-R,ch=H-T-B;const counts={F:num(xitem.F),D:num(xitem.D),C:num(xitem.C),B:num(xitem.B),A:num(xitem.A)},max=Math.max(1,...Object.values(counts));const X=s=>L+s/100*cw,Y=v=>T+ch-v/max*ch;for(let t=0;t<=100;t+=10){const line=document.createElementNS(NS,'line');line.setAttribute('x1',X(t));line.setAttribute('x2',X(t));line.setAttribute('y1',T);line.setAttribute('y2',T+ch);line.setAttribute('stroke','#eeeeee');svg.appendChild(line);if(t%20===0){const tx=document.createElementNS(NS,'text');tx.setAttribute('x',X(t));tx.setAttribute('y',H-16);tx.setAttribute('text-anchor','middle');tx.setAttribute('font-size','11');tx.setAttribute('fill','#666');tx.textContent=t;svg.appendChild(tx)}}[0,.25,.5,.75,1].forEach(f=>{const y=T+ch-f*ch,l=document.createElementNS(NS,'line');l.setAttribute('x1',L);l.setAttribute('x2',W-R);l.setAttribute('y1',y);l.setAttribute('y2',y);l.setAttribute('stroke','#ececec');svg.appendChild(l)});const buckets=[['F',50],['D',65],['C',75],['B',85],['A',95]],pts=[[X(0),Y(0)],...buckets.map(([g,s])=>[X(s),Y(counts[g])]),[X(100),Y(0)]];const path=document.createElementNS(NS,'path');path.setAttribute('d',curvePath(pts));path.setAttribute('fill','none');path.setAttribute('stroke','#cc0000');path.setAttribute('stroke-width','4');path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');svg.appendChild(path);const axis=document.createElementNS(NS,'text');axis.setAttribute('x',L+cw/2);axis.setAttribute('y',H-2);axis.setAttribute('text-anchor','middle');axis.setAttribute('font-size','12');axis.setAttribute('fill','#666');axis.textContent='Estimated numeric grade (0–100)';svg.appendChild(axis)}
 function renderDonut(x){const grades=['A','B','C','D','F'],vals=grades.map(g=>num(x[g])),total=vals.reduce((a,b)=>a+b,0);$('donutTotal').textContent=total.toLocaleString();let cur=0,stops=[];grades.forEach((g,i)=>{const sh=total?100*vals[i]/total:0,n=cur+sh;stops.push(COLORS[g]+' '+cur+'% '+n+'%');cur=n});$('gradeDonut').style.background=total?'conic-gradient('+stops.join(',')+')':'#eee';const leg=$('gradeLegend');leg.innerHTML='';grades.forEach((g,i)=>{const row=document.createElement('div');row.className='legend-row';const sw=document.createElement('span');sw.className='swatch';sw.style.background=COLORS[g];const gg=document.createElement('strong');gg.textContent=g;const c=document.createElement('span');c.textContent=vals[i].toLocaleString()+' students';const sh=document.createElement('span');sh.textContent=total?(100*vals[i]/total).toFixed(1)+'%':'—';row.append(sw,gg,c,sh);leg.appendChild(row)})}
 function setDetailMetrics(x,countLabel,count){$('detailGPA').textContent=fg(x.gpa);$('detailA').textContent=fp(x.aRate);$('detailABC').textContent=fp(x.abcRate);$('detailDFW').textContent=fp(x.dfwRate);$('detailStudents').textContent=x.students.toLocaleString();$('detailCountLabel').textContent=countLabel;$('detailCount').textContent=Number(count||0).toLocaleString();renderCurve(x);renderDonut(x)}
 function historyHeader(labels){const h=$('historyTable').querySelector('thead');h.innerHTML='';const tr=document.createElement('tr');labels.forEach((l,i)=>{const th=document.createElement('th');th.textContent=l;if(i===0||['Term','Subject','Course','Professor'].includes(l))th.className='left';tr.appendChild(th)});h.appendChild(tr);$('historyTable').querySelector('tbody').innerHTML=''}
-function openProfessor(name){const rows=DATA.filter(r=>r.instructor===name),agg=aggregate(rows),det=detailed(DATA).filter(x=>x.instructor===name).sort((a,b)=>termValue(b.term)-termValue(a.term)||a.course.localeCompare(b.course,undefined,{numeric:true}));state.detail={type:'professor',name};$('detailTitle').textContent=name;$('detailSubtitle').textContent=uniq(rows.map(r=>r.subject)).join(' • ')+' · '+uniq(rows.map(r=>r.term)).length+' term(s) · '+uniq(rows.map(r=>r.course)).length+' course(s)';$('detailRmpLink').style.display='inline-flex';$('detailRmpLink').href=rmpUrl(name);setDetailMetrics(agg,'Sections',agg.sections);$('historyTitle').textContent='Courses and terms taught';historyHeader(['Term','Subject','Course','Sections','Students','GPA','Adjusted GPA','A %','DFW %','View course']);const body=$('historyTable').querySelector('tbody');det.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.term,'left'),td(x.subject,'left'),td(x.course,'left'),td(x.sections),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openCourse(x.subject,x.course),'Analyze course'));tr.appendChild(v);body.appendChild(tr)});$('detailPanel').classList.add('visible');$('detailPanel').scrollIntoView({behavior:'smooth',block:'start'})}
-function openCourse(subject,course){const rows=DATA.filter(r=>r.subject===subject&&r.course===course),agg=aggregate(rows),det=detailed(rows).sort((a,b)=>termValue(b.term)-termValue(a.term)||(b.adjustedGpa??-1)-(a.adjustedGpa??-1));state.detail={type:'course',subject,course};$('detailTitle').textContent=course;$('detailSubtitle').textContent=subject+' · '+uniq(rows.map(r=>r.term)).length+' term(s) · '+uniq(rows.map(r=>r.instructor)).length+' professor(s)';$('detailRmpLink').style.display='none';setDetailMetrics(agg,'Professors',uniq(rows.map(r=>r.instructor)).length);$('historyTitle').textContent='All scraped terms and professors';historyHeader(['Term','Professor','Sections','Students','GPA','Adjusted GPA','A %','DFW %','View professor']);const body=$('historyTable').querySelector('tbody');det.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.term,'left'),td(x.instructor,'left'),td(x.sections),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));tr.appendChild(v);body.appendChild(tr)});$('detailPanel').classList.add('visible');$('detailPanel').scrollIntoView({behavior:'smooth',block:'start'})}
-function renderRaw(){const f=filters(),body=$('rawTable').querySelector('tbody');body.innerHTML='';ALL_ROWS.filter(r=>{if(r.rowType==='error')return(!f.term||r.term===f.term)&&(!f.subject||r.subject===f.subject)&&(!f.course||r.course===f.course);if(r.rowType==='summary'){if(f.instructor)return false;return matches({...r,instructor:'Total',section:''},f)}return matches(r,f)}).forEach(r=>{const tr=document.createElement('tr');if(r.rowType==='summary')tr.className='summary-row';if(r.rowType==='error')tr.className='error-row';tr.append(td(r.term||'','left'),td(r.subject||'','left'),td(r.course||'','left'),td(r.rowType==='summary'?'Total':(r.instructor||''),'left'),td(r.section||''));['A','B','C','D','F','I','CR','P','NC','PR','W','O'].forEach(k=>tr.appendChild(td(r[k]??'')));body.appendChild(tr)})}
-function render(){refreshFilters();const rows=filtered();renderMetrics(rows);renderProfessors(rows);renderCourses(rows);renderDetailRanking(rows);renderRaw()}
-function sortInstall(tableId,obj,renderFn,builder){document.querySelectorAll('#'+tableId+' th.sortable').forEach(th=>th.addEventListener('click',()=>{const k=th.dataset.key;if(obj.key===k)obj.dir*=-1;else{obj.key=k;obj.dir=['term','subject','course','instructor'].includes(k)?1:-1}renderFn(builder(filtered()))}))}
+
+function getDetailDependentItems(d){
+    if(d.type==='professor'){
+        const available=new Set(
+            DATA
+                .filter(r=>r.instructor===d.name&&d.filters.term.has(r.term))
+                .map(r=>courseKey(r.subject,r.course))
+        );
+        return d.options.course.filter(item=>available.has(item.value));
+    }
+
+    const available=new Set(
+        DATA
+            .filter(r=>r.subject===d.subject&&r.course===d.course&&d.filters.term.has(r.term))
+            .map(r=>r.instructor)
+    );
+    return d.options.instructor.filter(item=>available.has(item.value));
+}
+
+function syncDetailDependentSelection(d,items){
+    const key=d.type==='professor'?'course':'instructor';
+    const selected=d.filters[key];
+    const available=new Set(items.map(item=>item.value));
+
+    if(d.dependentAll!==false){
+        selected.clear();
+        items.forEach(item=>selected.add(item.value));
+    }else{
+        Array.from(selected).forEach(value=>{
+            if(!available.has(value))selected.delete(value);
+        });
+    }
+}
+
+function renderDetailFilterControls(keepOpenId=null){
+    const host=$('detailFilters');host.innerHTML='';if(!state.detail)return;
+    const d=state.detail;
+
+    const termControl=createMultiDropdown({
+        id:'detailTermFilter',
+        label:'Terms',
+        items:d.options.term,
+        selected:d.filters.term,
+        onChange:()=>{
+            const items=getDetailDependentItems(d);
+            syncDetailDependentSelection(d,items);
+            renderDetailFilterControls('detailTermFilter');
+            renderDetail();
+        },
+        allText:'All terms'
+    });
+    host.appendChild(termControl);
+
+    const dependentItems=getDetailDependentItems(d);
+    syncDetailDependentSelection(d,dependentItems);
+
+    if(d.type==='professor'){
+        host.appendChild(createMultiDropdown({
+            id:'detailCourseFilter',
+            label:'Courses',
+            items:dependentItems,
+            selected:d.filters.course,
+            onChange:()=>{
+                d.dependentAll=dependentItems.length>0&&dependentItems.every(item=>d.filters.course.has(item.value));
+                renderDetail();
+            },
+            allText:'All courses'
+        }));
+    }else{
+        host.appendChild(createMultiDropdown({
+            id:'detailProfessorFilter',
+            label:'Professors',
+            items:dependentItems,
+            selected:d.filters.instructor,
+            onChange:()=>{
+                d.dependentAll=dependentItems.length>0&&dependentItems.every(item=>d.filters.instructor.has(item.value));
+                renderDetail();
+            },
+            allText:'All professors'
+        }));
+    }
+
+    if(keepOpenId){
+        const openTarget=$(keepOpenId);
+        if(openTarget)openTarget.open=true;
+    }
+}
+function detailRows(){
+    if(!state.detail)return[];const d=state.detail;
+    if(d.type==='professor')return DATA.filter(r=>r.instructor===d.name&&d.filters.term.has(r.term)&&d.filters.course.has(courseKey(r.subject,r.course)));
+    return DATA.filter(r=>r.subject===d.subject&&r.course===d.course&&d.filters.term.has(r.term)&&d.filters.instructor.has(r.instructor));
+}
+function renderDetail(){
+    if(!state.detail)return;
+    const d=state.detail,rows=detailRows(),agg=aggregate(rows);
+    const contextual = d.type==='professor'
+        ? detailed(DATA).filter(x=>x.instructor===d.name&&d.filters.term.has(x.term)&&d.filters.course.has(courseKey(x.subject,x.course)))
+        : detailed(DATA.filter(r=>r.subject===d.subject&&r.course===d.course)).filter(x=>d.filters.term.has(x.term)&&d.filters.instructor.has(x.instructor));
+    const det=contextual.sort((a,b)=>termValue(b.term)-termValue(a.term)||a.course.localeCompare(b.course,undefined,{numeric:true}));
+    if(d.type==='professor'){
+        $('detailTitle').textContent=d.name;
+        $('detailSubtitle').textContent=uniq(rows.map(r=>r.subject)).join(' • ')+' · '+uniq(rows.map(r=>r.term)).length+' selected term(s) · '+uniq(rows.map(r=>courseKey(r.subject,r.course))).length+' selected course(s)';
+        $('detailRmpLink').style.display='inline-flex';$('detailRmpLink').href=rmpUrl(d.name);const selectedCourseKeys=Array.from(d.filters.course);const firstCourseKey=selectedCourseKeys[0]||d.options.course[0]?.value||'';const [compareSubject,compareCourse]=firstCourseKey.split('||');$('detailCompareLink').style.display=compareCourse?'inline-flex':'none';$('detailCompareLink').href=compareCourse?compareUrl(compareSubject,compareCourse,Array.from(d.filters.term),[d.name]):'#';setDetailMetrics(agg,'Sections',agg.sections);
+        $('historyTitle').textContent='Selected courses and terms taught';historyHeader(['Term','Subject','Course','Sections','Students','GPA','Adjusted GPA','A %','DFW %','View course']);
+        const body=$('historyTable').querySelector('tbody');det.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.term,'left'),td(x.subject,'left'),td(x.course,'left'),td(x.sections),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openCourse(x.subject,x.course),'Analyze course'));tr.appendChild(v);body.appendChild(tr)});
+    }else{
+        $('detailTitle').textContent=d.course;
+        $('detailSubtitle').textContent=d.subject+' · '+uniq(rows.map(r=>r.term)).length+' selected term(s) · '+uniq(rows.map(r=>r.instructor)).length+' selected professor(s)';
+        $('detailRmpLink').style.display='none';$('detailCompareLink').style.display='inline-flex';$('detailCompareLink').href=compareUrl(d.subject,d.course,Array.from(d.filters.term),Array.from(d.filters.instructor).slice(0,4));setDetailMetrics(agg,'Professors',uniq(rows.map(r=>r.instructor)).length);
+        $('historyTitle').textContent='Selected terms and professors';historyHeader(['Term','Professor','Sections','Students','GPA','Adjusted GPA','A %','DFW %','View professor']);
+        const body=$('historyTable').querySelector('tbody');det.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.term,'left'),td(x.instructor,'left'),td(x.sections),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));tr.appendChild(v);body.appendChild(tr)});
+    }
+}
+function openProfessor(name){
+    const rows=DATA.filter(r=>r.instructor===name);const termItems=uniq(rows.map(r=>r.term)).sort((a,b)=>termValue(b)-termValue(a)).map(v=>({value:v,label:v}));
+    const courseItems=uniq(rows.map(r=>courseKey(r.subject,r.course))).map(v=>{const [subject,course]=v.split('||');return{value:v,label:`${course} — ${subject}`}});
+    state.detail={type:'professor',name,options:{term:termItems,course:courseItems},filters:{term:new Set(termItems.map(x=>x.value)),course:new Set(courseItems.map(x=>x.value))},dependentAll:true};
+    renderDetailFilterControls();renderDetail();$('detailPanel').classList.add('visible');$('detailPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function openCourse(subject,course){
+    const rows=DATA.filter(r=>r.subject===subject&&r.course===course);const termItems=uniq(rows.map(r=>r.term)).sort((a,b)=>termValue(b)-termValue(a)).map(v=>({value:v,label:v}));const professorItems=uniq(rows.map(r=>r.instructor)).map(v=>({value:v,label:v}));
+    state.detail={type:'course',subject,course,options:{term:termItems,instructor:professorItems},filters:{term:new Set(termItems.map(x=>x.value)),instructor:new Set(professorItems.map(x=>x.value))},dependentAll:true};
+    renderDetailFilterControls();renderDetail();$('detailPanel').classList.add('visible');$('detailPanel').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function renderRaw(){const body=$('rawTable').querySelector('tbody');body.innerHTML='';const dataKeys=new Set(filtered().map(r=>[r.term,r.subject,r.course,r.instructor,r.section].join('||')));ALL_ROWS.filter(r=>{if(r.rowType==='data')return dataKeys.has([r.term,r.subject,r.course,r.instructor,r.section].join('||'));if(r.rowType==='summary')return state.filters.term.has(r.term)&&state.filters.subject.has(r.subject)&&state.filters.course.has(courseKey(r.subject,r.course));if(r.rowType==='error')return state.filters.term.has(r.term)&&state.filters.subject.has(r.subject)&&state.filters.course.has(courseKey(r.subject,r.course));return false}).forEach(r=>{const tr=document.createElement('tr');if(r.rowType==='summary')tr.className='summary-row';if(r.rowType==='error')tr.className='error-row';tr.append(td(r.term||'','left'),td(r.subject||'','left'),td(r.course||'','left'),td(r.rowType==='summary'?'Total':(r.instructor||''),'left'),td(r.section||''));['A','B','C','D','F','I','CR','P','NC','PR','W','O'].forEach(k=>tr.appendChild(td(r[k]??'')));body.appendChild(tr)})}
+function render(){const rows=filtered();renderMetrics(rows);renderProfessorGroups(rows);renderCourseGroups(rows);renderDetailRanking(rows);renderRaw()}
+
 function csvCell(v){const s=String(v??'');return '"'+s.replace(/"/g,'""')+'"'}
 $('exportCsv').addEventListener('click',()=>{const rows=filtered(),h=['Term','Subject','Course','Instructor','Section','A','B','C','D','F','I','CR','P','NC','PR','W','O'],lines=[h.map(csvCell).join(',')];rows.forEach(r=>lines.push([r.term,r.subject,r.course,r.instructor,r.section,r.A,r.B,r.C,r.D,r.F,r.I,r.CR,r.P,r.NC,r.PR,r.W,r.O].map(csvCell).join(',')));const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='TTU_grade_distribution_filtered.csv';a.click();URL.revokeObjectURL(url)});
-$('closeDetail').addEventListener('click',()=>{$('detailPanel').classList.remove('visible');state.detail=null});
-['termFilter','subjectFilter','courseFilter','professorFilter'].forEach(id=>$(id).addEventListener('change',render));$('searchFilter').addEventListener('input',render);$('resetFilters').addEventListener('click',()=>{['termFilter','subjectFilter','courseFilter','professorFilter'].forEach(id=>$(id).value='');$('searchFilter').value='';render()});
-fillSelect('termFilter',DATA.map(r=>r.term),'All terms');fillSelect('subjectFilter',DATA.map(r=>r.subject),'All subjects');fillSelect('courseFilter',DATA.map(r=>r.course),'All courses');fillSelect('professorFilter',DATA.map(r=>r.instructor),'All professors');sortInstall('professorTable',state.profSort,renderProfessors,professors);sortInstall('courseTable',state.courseSort,renderCourses,courses);sortInstall('detailRanking',state.detailSort,renderDetailRanking,detailed);render();
+$('closeDetail').addEventListener('click',()=>{$('detailPanel').classList.remove('visible');state.detail=null;$('detailFilters').innerHTML=''});
+$('searchFilter').addEventListener('input',render);
+$('resetFilters').addEventListener('click',()=>{Object.keys(state.filters).forEach(k=>{state.filters[k].clear();state.filterOptions[k].forEach(x=>state.filters[k].add(x.value))});$('searchFilter').value='';renderGlobalFilterControls();render()});
+$('detailRanking').querySelectorAll('th.sortable').forEach(th=>th.addEventListener('click',()=>{const k=th.dataset.key;if(state.detailSort.key===k)state.detailSort.dir*=-1;else{state.detailSort.key=k;state.detailSort.dir=['term','subject','course','instructor'].includes(k)?1:-1}renderDetailRanking(filtered())}));
+
+document.addEventListener('click',event=>{
+    document.querySelectorAll('details.multi-dropdown[open]').forEach(details=>{if(!details.contains(event.target))details.open=false});
+    const sortHeader=event.target.closest('th.sortable');if(!sortHeader)return;const table=sortHeader.closest('table');if(!table||!table.dataset.sortGroup)return;
+    const target=table.dataset.sortGroup==='professor'?state.profSort:state.courseSort;const k=sortHeader.dataset.key;if(target.key===k)target.dir*=-1;else{target.key=k;target.dir=['subject','course','instructor'].includes(k)?1:-1}render();
+});
+
+initializeGlobalFilters();
+render();
 </script>
 </body>
 </html>
