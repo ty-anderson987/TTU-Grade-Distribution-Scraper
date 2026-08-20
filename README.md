@@ -118,3 +118,11 @@ Users are responsible for complying with Texas Tech University policies and any 
 The developer is not responsible for account restrictions, rate limiting, service interruptions, or other consequences resulting from improper or excessive use of this software.
 
 This software is provided for educational and informational purposes only.
+
+## License
+
+Licensed under the Apache License 2.0.
+
+Copyright © 2026 Ty Anderson.
+
+See [LICENSE](LICENSE) and [NOTICE](NOTICE) for details.
