@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTU Grade Scraper V2.6</title>
+<style>
+:root {
+    color-scheme: light;
+    --red: #cc0000;
+    --red-dark: #9d0000;
+    --ink: #171717;
+    --muted: #6b7280;
+    --line: #d7d9dd;
+    --panel: #ffffff;
+    --bg: #f4f5f7;
+    --soft: #f8f9fb;
+    --good: #18794e;
+    --warn: #9a6700;
+    --bad: #b42318;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+header {
+    background: #111;
+    color: white;
+    border-bottom: 4px solid var(--red);
+}
+.header-inner { max-width: 1220px; margin: 0 auto; padding: 21px 24px 17px; }
+header h1 { margin: 0 0 5px; font-size: 26px; }
+header p { margin: 0; color: #d7d7d7; }
+.activity-shell { height: 5px; background: #292929; overflow: hidden; }
+.activity-bar { height: 100%; width: 0; background: var(--red); transition: width .2s ease; }
+.activity-bar.indeterminate { width: 36%; animation: slide 1.15s ease-in-out infinite; }
+@keyframes slide { from { transform: translateX(-110%); } to { transform: translateX(300%); } }
+main { max-width: 1220px; margin: 0 auto; padding: 20px; }
+.card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    margin-bottom: 15px;
+    overflow: visible;
+}
+.card-head {
+    padding: 15px 17px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+.card-head h2 { margin: 0; font-size: 19px; }
+.card-body { padding: 16px 17px 18px; }
+.status-row { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.status-left { display: flex; align-items: center; gap: 10px; }
+.dot { width: 11px; height: 11px; border-radius: 50%; background: #888; flex: none; }
+.dot.ready { background: var(--good); }
+.dot.busy { background: var(--warn); }
+.dot.error { background: var(--bad); }
+#statusMessage { font-weight: 700; }
+#statusDetail, .help, .muted { color: var(--muted); font-size: 14px; }
+#statusDetail { margin-top: 5px; }
+button, .button-link {
+    border: 1px solid #aaa;
+    background: white;
+    color: #111;
+    border-radius: 8px;
+    padding: 9px 13px;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+button:hover:not(:disabled), .button-link:hover { background: #f0f0f0; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.primary, .button-link.primary { background: var(--red); border-color: var(--red); color: white; }
+button.primary:hover:not(:disabled), .button-link.primary:hover { background: var(--red-dark); }
+.hidden { display: none !important; }
+#errorBox {
+    margin-top: 12px; padding: 11px; border-radius: 8px;
+    background: #fff0f0; border: 1px solid #e7aaaa; color: var(--bad); white-space: pre-wrap;
+}
+.login-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; max-width: 760px; }
+.field label { display: block; font-weight: 700; margin-bottom: 6px; }
+.field input, .search-input {
+    width: 100%; border: 1px solid #aaa; border-radius: 8px; padding: 10px 11px; font: inherit; background: white;
+}
+.login-actions { display: flex; align-items: center; gap: 10px; margin-top: 13px; flex-wrap: wrap; }
+.selector-grid {
+    display: grid;
+    grid-template-columns: minmax(250px, 1fr) auto minmax(250px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+.step-select-row {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) auto;
+    gap: 12px;
+    align-items: end;
+}
+.selector-block label.selector-label { display: block; font-weight: 750; margin-bottom: 6px; }
+.multi-select { position: relative; }
+.multi-select > summary {
+    list-style: none;
+    border: 1px solid #aaa;
+    border-radius: 9px;
+    padding: 10px 12px;
+    background: white;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 43px;
+    align-items: center;
+}
+.multi-select > summary::-webkit-details-marker { display: none; }
+.multi-select[open] > summary { border-color: var(--red); box-shadow: 0 0 0 2px rgba(204,0,0,.12); }
+.multi-panel {
+    position: absolute;
+    z-index: 30;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 100%;
+    width: max-content;
+    max-width: 430px;
+    max-height: 360px;
+    overflow: auto;
+    background: white;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 8px;
+    box-shadow: 0 14px 35px rgba(0,0,0,.16);
+}
+.multi-actions { display: flex; gap: 7px; padding: 4px 4px 8px; position: sticky; top: -8px; background: white; z-index: 2; }
+.multi-actions button { padding: 6px 9px; font-size: 13px; }
+.check-list { display: grid; gap: 2px; min-width: 250px; }
+.check-row { display: flex; gap: 9px; align-items: center; padding: 7px 6px; border-radius: 6px; cursor: pointer; }
+.check-row:hover { background: #f5f5f5; }
+.check-row input { margin: 0; }
+.load-stack { display: flex; align-items: center; gap: 8px; }
+.inline-progress { width: 82px; }
+.inline-track { height: 6px; border-radius: 999px; overflow: hidden; background: #e6e7e9; }
+.inline-bar { height: 100%; width: 0; background: var(--red); transition: width .18s ease; }
+.inline-text { color: var(--muted); font-size: 12px; margin-top: 3px; white-space: nowrap; }
+.selection-note { margin: 12px 0 0; color: var(--muted); font-size: 13px; }
+.course-toolbar {
+    display: grid;
+    grid-template-columns: minmax(220px,1fr) auto auto;
+    gap: 9px;
+    margin-bottom: 13px;
+    align-items: center;
+}
+.subject-group { border: 1px solid var(--line); border-radius: 10px; overflow: visible; margin-bottom: 10px; background: white; }
+.subject-group > summary {
+    list-style: none; cursor: pointer; padding: 12px 14px; background: var(--soft); font-weight: 750;
+    display: flex; justify-content: space-between; gap: 12px; align-items: center;
+}
+.subject-group > summary::-webkit-details-marker { display: none; }
+.course-table { width: 100%; border-collapse: collapse; }
+.course-table th, .course-table td { padding: 10px 12px; border-top: 1px solid #ececef; text-align: left; vertical-align: middle; }
+.course-table th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); background: #fcfcfd; }
+.course-table td:first-child { width: 42px; text-align: center; }
+.course-table td:last-child { width: 205px; }
+.course-name { font-weight: 720; }
+.course-meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.term-picker { position: relative; }
+.term-picker > summary {
+    list-style: none; cursor: pointer; border: 1px solid #bbb; border-radius: 8px; padding: 7px 9px;
+    display: flex; justify-content: space-between; gap: 9px; align-items: center; background: white; font-size: 13px;
+}
+.term-picker > summary::-webkit-details-marker { display: none; }
+.term-picker .multi-panel { right: 0; left: auto; min-width: 235px; max-width: 300px; }
+.term-picker.disabled { opacity: .55; pointer-events: none; }
+.course-row.filtered-out { display: none; }
+.bottom-action {
+    position: sticky; bottom: 10px; z-index: 15;
+    margin-top: 14px; padding: 11px 12px; border: 1px solid var(--line); border-radius: 11px;
+    background: rgba(255,255,255,.96); backdrop-filter: blur(10px);
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+}
+.selection-summary strong { font-size: 18px; }
+.progress-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 9px; margin-bottom: 13px; }
+.metric { border: 1px solid var(--line); border-radius: 9px; padding: 11px; background: var(--soft); }
+.metric strong { display: block; font-size: 21px; margin-top: 3px; }
+.progress-track { height: 14px; border-radius: 999px; background: #e5e6e8; overflow: hidden; }
+.progress-bar { height: 100%; width: 0; background: var(--red); transition: width .2s ease; }
+.progress-label { margin-top: 7px; font-size: 14px; color: var(--muted); }
+.actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; margin-top: 13px; }
+footer { max-width: 1220px; margin: 0 auto; padding: 0 20px 28px; color: var(--muted); font-size: 13px; }
+@media (max-width: 900px) {
+    .selector-grid, .step-select-row { grid-template-columns: 1fr; }
+    .load-stack { justify-content: flex-start; }
+    .course-toolbar { grid-template-columns: 1fr 1fr; }
+    .course-toolbar .search-input { grid-column: 1 / -1; }
+}
+@media (max-width: 650px) {
+    main { padding: 12px; }
+    .header-inner { padding: 18px 14px 15px; }
+    .login-grid, .progress-grid { grid-template-columns: 1fr; }
+    .course-table th:nth-child(3), .course-table td:nth-child(3) { display: none; }
+    .course-table td:last-child { width: 155px; }
+    .multi-panel { width: min(92vw, 360px); }
+}
+</style>
+</head>
+<body>
+<header>
+    <div class="header-inner">
+        <h1>TTU Grade Distribution Scraper V2.6</h1>
+        <p>Choose a course once, then choose the terms for that course. Cognos runs headless in the background.</p>
+    </div>
+    <div class="activity-shell"><div id="activityBar" class="activity-bar"></div></div>
+</header>
+
+<main>
+    <section class="card">
+        <div class="card-body">
+            <div class="status-row">
+                <div>
+                    <div class="status-left"><span id="statusDot" class="dot busy"></span><span id="statusMessage">Starting...</span></div>
+                    <div id="statusDetail">Connecting to Cognos...</div>
+                </div>
+                <button id="reconnectBtn" type="button">Reconnect Cognos</button>
+            </div>
+            <div id="errorBox" class="hidden"></div>
+        </div>
+    </section>
+
+    <section id="loginStep" class="card hidden">
+        <div class="card-head"><h2>Texas Tech sign in</h2></div>
+        <div class="card-body">
+            <p class="help">Credentials are sent only to this local app at 127.0.0.1 and used by Playwright to fill the TTU sign-in form. The password is not saved.</p>
+            <div class="login-grid">
+                <div class="field"><label for="loginUsername">TTU username or email</label><input id="loginUsername" autocomplete="off" placeholder="name@ttu.edu or ttu\username"></div>
+                <div class="field"><label for="loginPassword">Password</label><input id="loginPassword" type="password" autocomplete="off" placeholder="Password"></div>
+            </div>
+            <div class="login-actions"><button id="loginBtn" class="primary" type="button">Sign in</button><span id="loginHint" class="muted">Enter credentials, then complete any TTU text-message/MFA verification if requested.</span></div>
+        </div>
+    </section>
+
+    <section class="card">
+        <div class="card-head">
+            <div><h2>1. Choose terms</h2><div class="muted">Pick the semesters you want included in the search scope.</div></div>
+        </div>
+        <div class="card-body">
+            <div class="step-select-row">
+                <div class="selector-block">
+                    <label class="selector-label">Terms</label>
+                    <details id="termsDropdown" class="multi-select">
+                        <summary><span id="termsSummary">Waiting for Cognos...</span><span>▾</span></summary>
+                        <div class="multi-panel">
+                            <div class="multi-actions"><button id="termsAll" type="button" disabled>Select all</button><button id="termsNone" type="button" disabled>Clear</button></div>
+                            <div id="termsList" class="check-list"><div class="muted">Waiting for Cognos...</div></div>
+                        </div>
+                    </details>
+                </div>
+                <div class="load-stack">
+                    <button id="loadSubjectsBtn" class="primary" type="button" disabled>Load subjects</button>
+                    <div class="inline-progress"><div class="inline-track"><div id="subjectsMiniBar" class="inline-bar"></div></div><div id="subjectsMiniText" class="inline-text">—</div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="subjectsStep" class="card hidden">
+        <div class="card-head">
+            <div><h2>2. Choose subjects</h2><div class="muted">Subjects are the union of what exists in the terms you selected.</div></div>
+        </div>
+        <div class="card-body">
+            <div class="step-select-row">
+                <div class="selector-block">
+                    <label class="selector-label">Subjects</label>
+                    <details id="subjectsDropdown" class="multi-select">
+                        <summary><span id="subjectsSummary">Load subjects first</span><span>▾</span></summary>
+                        <div class="multi-panel">
+                            <div class="multi-actions"><button id="subjectsAll" type="button" disabled>Select all</button><button id="subjectsNone" type="button" disabled>Clear</button></div>
+                            <div id="subjectsList" class="check-list"><div class="muted">No subjects loaded.</div></div>
+                        </div>
+                    </details>
+                </div>
+                <div class="load-stack">
+                    <button id="loadCoursesBtn" class="primary" type="button" disabled>Load courses</button>
+                    <div class="inline-progress"><div class="inline-track"><div id="coursesMiniBar" class="inline-bar"></div></div><div id="coursesMiniText" class="inline-text">—</div></div>
+                </div>
+            </div>
+            <p id="selectionNote" class="selection-note">Step 3 will show each selected subject once, then every course found across the selected terms. Each course can choose its own available terms.</p>
+        </div>
+    </section>
+
+    <section id="coursesStep" class="card hidden">
+        <div class="card-head">
+            <div><h2>3. Choose courses and their terms</h2><div class="muted">Courses are grouped by subject. Each course appears once; its term menu only contains semesters where that course actually exists.</div></div>
+        </div>
+        <div class="card-body">
+            <div class="course-toolbar">
+                <input id="courseSearch" class="search-input" type="search" placeholder="Search course or subject...">
+                <button id="coursesAll" type="button">Select all courses</button>
+                <button id="coursesNone" type="button">Clear courses</button>
+            </div>
+            <div id="coursesList"></div>
+            <div class="bottom-action">
+                <div class="selection-summary"><strong id="selectionSummary">0 courses · 0 reports</strong><div class="muted">A report = one selected course in one selected term.</div></div>
+                <button id="startScrapeBtn" class="primary" type="button" disabled>Start scrape</button>
+            </div>
+        </div>
+    </section>
+
+    <section id="progressStep" class="card hidden">
+        <div class="card-head"><div><h2>4. Scrape progress</h2><div class="muted">Cognos is usually the slow part. This updates as soon as each report finishes.</div></div></div>
+        <div class="card-body">
+            <div class="progress-grid">
+                <div class="metric">Reports selected<strong id="selectedCount">0</strong></div>
+                <div class="metric">Completed<strong id="completedCount">0</strong></div>
+                <div class="metric">Errors<strong id="errorCount">0</strong></div>
+            </div>
+            <div class="progress-track"><div id="progressBar" class="progress-bar"></div></div>
+            <div id="progressLabel" class="progress-label">Ready.</div>
+            <div class="actions">
+                <button id="newScrapeBtn" class="hidden" type="button">New selection</button>
+                <a id="openResultsBtn" class="button-link primary hidden">Open results</a>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer>This tool runs locally. The Playwright profile and Texas Tech session belong to the current computer user.</footer>
+
+<script>
+const app = {
+    terms: [], subjects: [], courseGroups: [], courseCatalog: [], termsLoaded: false,
+    lastPhase: "", lastStatus: null
+};
+const $ = id => document.getElementById(id);
+const norm = s => String(s || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+
+async function api(url, options = {}) {
+    const response = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || `Request failed (${response.status})`);
+    return data;
+}
+function setError(message) {
+    const box = $("errorBox");
+    box.textContent = message || "";
+    box.classList.toggle("hidden", !message);
+}
+function setLoginVisible(visible, status = {}) {
+    $("loginStep").classList.toggle("hidden", !visible);
+    const busy = ["signing-in", "mfa"].includes(status.phase);
+    $("loginBtn").disabled = busy;
+    $("loginBtn").textContent = status.phase === "signing-in" ? "Signing in..." : status.phase === "mfa" ? "Waiting for verification..." : "Sign in";
+}
+async function submitLogin() {
+    setError("");
+    const username = $("loginUsername").value.trim();
+    const password = $("loginPassword").value;
+    if (!username) return setError("Enter your Texas Tech username or email.");
+    if (!password) return setError("Enter your Texas Tech password.");
+    $("loginBtn").disabled = true;
+    const body = JSON.stringify({ username, password });
+    $("loginPassword").value = "";
+    try {
+        const data = await api("/api/login", { method: "POST", body });
+        app.terms = data.terms || [];
+        app.termsLoaded = true;
+        renderTerms();
+        setLoginVisible(false);
+    } catch (error) {
+        setError(error.message);
+        $("loginBtn").disabled = false;
+    }
+}
+
+function selectedTermInputs() { return Array.from(document.querySelectorAll("#termsList input.term-check:checked")); }
+function selectedSubjectInputs() { return Array.from(document.querySelectorAll("#subjectsList input.subject-check:checked")); }
+function selectedTerms() { return selectedTermInputs().map(i => app.terms[Number(i.dataset.index)]); }
+function selectedSubjects() { return selectedSubjectInputs().map(i => app.subjects[Number(i.dataset.index)].text); }
+function setChecks(selector, checked) { document.querySelectorAll(selector).forEach(i => i.checked = checked); }
+
+function updateTermsSummary() {
+    const selected = selectedTerms();
+    $("termsSummary").textContent = !selected.length ? "Choose terms" : selected.length === 1 ? selected[0].text : `${selected.length} terms selected`;
+    $("loadSubjectsBtn").disabled = selected.length === 0 || Boolean(app.lastStatus?.busy);
+}
+function updateSubjectsSummary() {
+    const selected = selectedSubjects();
+    $("subjectsSummary").textContent = !app.subjects.length ? "Load subjects first" : !selected.length ? "Choose subjects" : selected.length === 1 ? selected[0] : `${selected.length} subjects selected`;
+    $("loadCoursesBtn").disabled = selected.length === 0 || Boolean(app.lastStatus?.busy);
+}
+function clearCatalog() {
+    app.subjects = []; app.courseGroups = []; app.courseCatalog = [];
+    $("subjectsList").innerHTML = '<div class="muted">No subjects loaded.</div>';
+    $("subjectsAll").disabled = true; $("subjectsNone").disabled = true;
+    $("subjectsStep").classList.add("hidden");
+    $("coursesStep").classList.add("hidden");
+    $("progressStep").classList.add("hidden");
+    $("subjectsSummary").textContent = "Load subjects first";
+    $("loadCoursesBtn").disabled = true;
+}
+function clearCoursesOnly() {
+    app.courseGroups = []; app.courseCatalog = [];
+    $("coursesStep").classList.add("hidden");
+    $("progressStep").classList.add("hidden");
+}
+
+function renderTerms() {
+    const list = $("termsList"); list.innerHTML = "";
+    app.terms.forEach((term, index) => {
+        const label = document.createElement("label"); label.className = "check-row";
+        const input = document.createElement("input"); input.type = "checkbox"; input.className = "term-check"; input.dataset.index = index;
+        const text = document.createElement("span"); text.textContent = term.text;
+        input.addEventListener("change", () => { clearCatalog(); updateTermsSummary(); });
+        label.append(input, text); list.append(label);
+    });
+    $("termsAll").disabled = false; $("termsNone").disabled = false;
+    updateTermsSummary();
+}
+function renderSubjects(subjects) {
+    app.subjects = subjects;
+    const list = $("subjectsList"); list.innerHTML = "";
+    subjects.forEach((subject, index) => {
+        const label = document.createElement("label"); label.className = "check-row";
+        const input = document.createElement("input"); input.type = "checkbox"; input.className = "subject-check"; input.dataset.index = index;
+        const text = document.createElement("span"); text.innerHTML = `${escapeHtml(subject.text)} <span class="muted">(${subject.availableTerms.length} terms)</span>`;
+        input.addEventListener("change", () => { clearCoursesOnly(); updateSubjectsSummary(); });
+        label.append(input, text); list.append(label);
+    });
+    $("subjectsAll").disabled = false; $("subjectsNone").disabled = false;
+    $("subjectsStep").classList.remove("hidden");
+    updateSubjectsSummary();
+    $("subjectsDropdown").open = true;
+    $("subjectsStep").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function aggregateCourses(groups) {
+    const map = new Map();
+    groups.forEach((group, groupIndex) => {
+        group.courses.forEach((course, courseIndex) => {
+            const key = `${norm(group.subject.text).toLowerCase()}||${String(course.value)}||${norm(course.text).toLowerCase()}`;
+            if (!map.has(key)) map.set(key, { key, subject: group.subject, course, availability: [] });
+            map.get(key).availability.push({ groupIndex, courseIndex, groupId: group.id, term: group.term, subject: group.subject });
+        });
+    });
+    return Array.from(map.values()).sort((a,b) => a.subject.text.localeCompare(b.subject.text) || a.course.text.localeCompare(b.course.text, undefined, { numeric: true }));
+}
+function renderCourses(groups) {
+    app.courseGroups = groups;
+    app.courseCatalog = aggregateCourses(groups);
+    const root = $("coursesList"); root.innerHTML = "";
+    const bySubject = new Map();
+    app.courseCatalog.forEach((item, catalogIndex) => {
+        const key = item.subject.text;
+        if (!bySubject.has(key)) bySubject.set(key, []);
+        bySubject.get(key).push({ item, catalogIndex });
+    });
+    let subjectIndex = 0;
+    bySubject.forEach((entries, subjectName) => {
+        const details = document.createElement("details"); details.className = "subject-group"; details.open = subjectIndex++ < 2;
+        const summary = document.createElement("summary"); summary.innerHTML = `<span>${escapeHtml(subjectName)}</span><span class="muted">${entries.length} courses</span>`;
+        const table = document.createElement("table"); table.className = "course-table";
+        table.innerHTML = '<thead><tr><th></th><th>Course</th><th>Availability</th><th>Terms</th></tr></thead>';
+        const tbody = document.createElement("tbody");
+        entries.forEach(({ item, catalogIndex }) => {
+            const tr = document.createElement("tr"); tr.className = "course-row"; tr.dataset.catalogIndex = catalogIndex; tr.dataset.search = `${item.subject.text} ${item.course.text}`.toLowerCase();
+            const tdCheck = document.createElement("td");
+            const master = document.createElement("input"); master.type = "checkbox"; master.className = "course-master"; master.dataset.catalogIndex = catalogIndex;
+            tdCheck.append(master);
+            const tdCourse = document.createElement("td"); tdCourse.innerHTML = `<div class="course-name">${escapeHtml(item.course.text)}</div><div class="course-meta">${escapeHtml(item.subject.text)}</div>`;
+            const tdAvail = document.createElement("td"); tdAvail.innerHTML = `<span>${item.availability.length} term${item.availability.length === 1 ? "" : "s"}</span>`;
+            const tdTerms = document.createElement("td");
+            const picker = document.createElement("details"); picker.className = "term-picker disabled"; picker.dataset.catalogIndex = catalogIndex;
+            const pickSummary = document.createElement("summary"); pickSummary.innerHTML = `<span class="term-summary">${`All ${item.availability.length} terms`}</span><span>▾</span>`;
+            const panel = document.createElement("div"); panel.className = "multi-panel";
+            const actions = document.createElement("div"); actions.className = "multi-actions";
+            const allBtn = document.createElement("button"); allBtn.type = "button"; allBtn.textContent = "All";
+            const noneBtn = document.createElement("button"); noneBtn.type = "button"; noneBtn.textContent = "None";
+            actions.append(allBtn, noneBtn); panel.append(actions);
+            const list = document.createElement("div"); list.className = "check-list";
+            item.availability.forEach((avail, availIndex) => {
+                const label = document.createElement("label"); label.className = "check-row";
+                const input = document.createElement("input"); input.type = "checkbox"; input.className = "course-term-check"; input.dataset.catalogIndex = catalogIndex; input.dataset.availIndex = availIndex; input.checked = true;
+                const text = document.createElement("span"); text.textContent = avail.term.text;
+                input.addEventListener("change", () => { updateCourseTermSummary(catalogIndex); updateSelectionSummary(); });
+                label.append(input, text); list.append(label);
+            });
+            panel.append(list); picker.append(pickSummary, panel); tdTerms.append(picker);
+            master.addEventListener("change", () => {
+                picker.classList.toggle("disabled", !master.checked);
+                if (master.checked && !item.availability.some((_,i) => termCheck(catalogIndex,i)?.checked)) {
+                    item.availability.forEach((_,i) => { const c = termCheck(catalogIndex,i); if (c) c.checked = true; });
+                }
+                updateCourseTermSummary(catalogIndex); updateSelectionSummary();
+            });
+            allBtn.addEventListener("click", e => { e.preventDefault(); item.availability.forEach((_,i) => { const c=termCheck(catalogIndex,i); if(c)c.checked=true; }); updateCourseTermSummary(catalogIndex); updateSelectionSummary(); });
+            noneBtn.addEventListener("click", e => { e.preventDefault(); item.availability.forEach((_,i) => { const c=termCheck(catalogIndex,i); if(c)c.checked=false; }); updateCourseTermSummary(catalogIndex); updateSelectionSummary(); });
+            tr.append(tdCheck, tdCourse, tdAvail, tdTerms); tbody.append(tr);
+        });
+        table.append(tbody); details.append(summary, table); root.append(details);
+    });
+    $("coursesStep").classList.remove("hidden");
+    updateSelectionSummary();
+    $("coursesStep").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+function termCheck(catalogIndex, availIndex) { return document.querySelector(`.course-term-check[data-catalog-index="${catalogIndex}"][data-avail-index="${availIndex}"]`); }
+function masterCheck(catalogIndex) { return document.querySelector(`.course-master[data-catalog-index="${catalogIndex}"]`); }
+function updateCourseTermSummary(catalogIndex) {
+    const picker = document.querySelector(`.term-picker[data-catalog-index="${catalogIndex}"]`);
+    if (!picker) return;
+    const checks = Array.from(document.querySelectorAll(`.course-term-check[data-catalog-index="${catalogIndex}"]`));
+    const count = checks.filter(c => c.checked).length;
+    const total = checks.length;
+    picker.querySelector(".term-summary").textContent = count === total ? `All ${total} terms` : `${count}/${total} terms`;
+}
+function updateSelectionSummary() {
+    let courses = 0, reports = 0;
+    app.courseCatalog.forEach((item, index) => {
+        if (!masterCheck(index)?.checked) return;
+        const n = item.availability.filter((_,i) => termCheck(index,i)?.checked).length;
+        if (n > 0) { courses++; reports += n; }
+    });
+    $("selectionSummary").textContent = `${courses} course${courses===1?"":"s"} · ${reports} report${reports===1?"":"s"}`;
+    $("selectedCount").textContent = reports;
+    $("startScrapeBtn").disabled = reports === 0 || Boolean(app.lastStatus?.busy);
+}
+function buildSelectedGroups() {
+    const map = new Map();
+    app.courseCatalog.forEach((item, catalogIndex) => {
+        if (!masterCheck(catalogIndex)?.checked) return;
+        item.availability.forEach((avail, availIndex) => {
+            if (!termCheck(catalogIndex, availIndex)?.checked) return;
+            const original = app.courseGroups[avail.groupIndex];
+            if (!map.has(original.id)) map.set(original.id, { id: original.id, term: original.term, subject: original.subject, courses: [] });
+            const group = map.get(original.id);
+            if (!group.courses.some(c => c.value === item.course.value && c.text === item.course.text)) group.courses.push(item.course);
+        });
+    });
+    return Array.from(map.values()).filter(g => g.courses.length);
+}
+function escapeHtml(value) { return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
+
+function updateActivity(status) {
+    const bar = $("activityBar");
+    bar.classList.remove("indeterminate");
+    const phase = status.phase;
+    const total = Number(status.total || 0); const current = Number(status.current || 0);
+    if (["connecting","signing-in","mfa"].includes(phase)) { bar.classList.add("indeterminate"); return; }
+    if (["loading-subjects","loading-courses","scraping"].includes(phase) && total) {
+        let value = Math.max(0, Math.min(total, phase === "scraping" ? current - 1 : current));
+        bar.style.width = `${Math.round((value / total) * 100)}%`; return;
+    }
+    bar.style.width = phase === "complete" ? "100%" : "0%";
+}
+function updateInlineProgress(status) {
+    const configs = [
+        ["loading-subjects", "subjectsMiniBar", "subjectsMiniText"],
+        ["loading-courses", "coursesMiniBar", "coursesMiniText"]
+    ];
+    configs.forEach(([phase, barId, textId]) => {
+        const bar = $(barId), text = $(textId);
+        if (status.phase === phase) {
+            const total=Number(status.total||0), current=Number(status.current||0), pct=total?Math.round(current/total*100):0;
+            bar.style.width=`${pct}%`; text.textContent=total?`${current}/${total}`:"Loading";
+        } else if (app.lastPhase === phase && status.phase === "ready") {
+            bar.style.width="100%"; text.textContent="Done";
+        } else if (!["loading-subjects","loading-courses"].includes(status.phase)) {
+            if (status.phase !== "ready") return;
+        }
+    });
+}
+
+$("loginBtn").addEventListener("click", submitLogin);
+$("loginUsername").addEventListener("keydown", e => { if (e.key === "Enter") $("loginPassword").focus(); });
+$("loginPassword").addEventListener("keydown", e => { if (e.key === "Enter") submitLogin(); });
+$("termsAll").addEventListener("click", e => { e.preventDefault(); setChecks("#termsList input.term-check", true); clearCatalog(); updateTermsSummary(); });
+$("termsNone").addEventListener("click", e => { e.preventDefault(); setChecks("#termsList input.term-check", false); clearCatalog(); updateTermsSummary(); });
+$("subjectsAll").addEventListener("click", e => { e.preventDefault(); setChecks("#subjectsList input.subject-check", true); clearCoursesOnly(); updateSubjectsSummary(); });
+$("subjectsNone").addEventListener("click", e => { e.preventDefault(); setChecks("#subjectsList input.subject-check", false); clearCoursesOnly(); updateSubjectsSummary(); });
+
+$("loadSubjectsBtn").addEventListener("click", async () => {
+    setError(""); $("loadSubjectsBtn").disabled = true; $("subjectsMiniBar").style.width="0%"; $("subjectsMiniText").textContent="Starting";
+    try {
+        const data = await api("/api/subjects", { method:"POST", body:JSON.stringify({terms:selectedTerms()}) });
+        renderSubjects(data.subjects); $("termsDropdown").open = false;
+    } catch (error) { setError(error.message); }
+    finally { updateTermsSummary(); }
+});
+$("loadCoursesBtn").addEventListener("click", async () => {
+    setError(""); $("loadCoursesBtn").disabled = true; $("coursesMiniBar").style.width="0%"; $("coursesMiniText").textContent="Starting";
+    try {
+        const data = await api("/api/courses", { method:"POST", body:JSON.stringify({terms:selectedTerms(),subjects:selectedSubjects()}) });
+        renderCourses(data.groups); $("subjectsDropdown").open = false;
+    } catch (error) { setError(error.message); }
+    finally { updateSubjectsSummary(); }
+});
+$("courseSearch").addEventListener("input", () => {
+    const q=$("courseSearch").value.trim().toLowerCase();
+    document.querySelectorAll(".course-row").forEach(row => row.classList.toggle("filtered-out", q && !row.dataset.search.includes(q)));
+});
+$("coursesAll").addEventListener("click", () => { document.querySelectorAll(".course-row:not(.filtered-out) .course-master").forEach(m => { m.checked=true; const i=Number(m.dataset.catalogIndex); document.querySelector(`.term-picker[data-catalog-index="${i}"]`)?.classList.remove("disabled"); }); updateSelectionSummary(); });
+$("coursesNone").addEventListener("click", () => { document.querySelectorAll(".course-master").forEach(m => { m.checked=false; const i=Number(m.dataset.catalogIndex); document.querySelector(`.term-picker[data-catalog-index="${i}"]`)?.classList.add("disabled"); }); updateSelectionSummary(); });
+
+$("startScrapeBtn").addEventListener("click", async () => {
+    setError(""); const groups=buildSelectedGroups(); const count=groups.reduce((s,g)=>s+g.courses.length,0);
+    if (!count) return setError("Select at least one course and at least one term for it.");
+    $("progressStep").classList.remove("hidden"); $("selectedCount").textContent=count; $("completedCount").textContent="0"; $("errorCount").textContent="0"; $("progressBar").style.width="0%"; $("progressLabel").textContent="Starting scrape..."; $("openResultsBtn").classList.add("hidden"); $("newScrapeBtn").classList.add("hidden");
+    try { await api("/api/scrape", {method:"POST",body:JSON.stringify({groups})}); }
+    catch(error){ setError(error.message); updateSelectionSummary(); }
+});
+function resetForNewSelection() {
+    setError(""); setChecks("#termsList input.term-check", false); clearCatalog(); updateTermsSummary(); $("subjectsMiniBar").style.width="0%"; $("subjectsMiniText").textContent="—"; $("coursesMiniBar").style.width="0%"; $("coursesMiniText").textContent="—"; $("completedCount").textContent="0"; $("errorCount").textContent="0"; $("progressBar").style.width="0%"; $("progressLabel").textContent="Ready."; $("newScrapeBtn").classList.add("hidden"); $("openResultsBtn").classList.add("hidden"); window.scrollTo({top:0,behavior:"smooth"});
+}
+$("newScrapeBtn").addEventListener("click", resetForNewSelection);
+$("reconnectBtn").addEventListener("click", async () => {
+    setError(""); $("reconnectBtn").disabled=true;
+    try { const data=await api("/api/reconnect",{method:"POST",body:"{}"}); app.terms=data.terms||[]; app.termsLoaded=true; renderTerms(); clearCatalog(); }
+    catch(error){setError(error.message);} finally{$("reconnectBtn").disabled=false;}
+});
+
+async function loadTermsOnce(){ if(app.termsLoaded)return; try{const data=await api("/api/terms");app.terms=data.terms||[];app.termsLoaded=true;renderTerms();}catch{} }
+async function pollStatus(){
+    try{
+        const status=await api("/api/status"); app.lastStatus=status;
+        const dot=$("statusDot"); dot.className="dot";
+        if(status.phase==="error")dot.classList.add("error"); else if(status.busy||["connecting","login-required","signing-in","mfa","loading-subjects","loading-courses","scraping"].includes(status.phase))dot.classList.add("busy"); else if(status.connected)dot.classList.add("ready");
+        $("statusMessage").textContent=status.message||status.phase||"Ready";
+        if(status.loginRequired||["login-required","signing-in","mfa"].includes(status.phase))setLoginVisible(true,status); else if(status.connected)setLoginVisible(false,status);
+        $("statusDetail").textContent = status.phase==="mfa" ? "Complete any Texas Tech text-message/MFA verification if requested; Cognos will continue automatically." : status.phase==="login-required" ? "Your saved TTU session is not active. Sign in above; Playwright stays hidden." : status.connected ? "Connected to Cognos. Browser automation is running headless in the background." : "Connecting to Cognos...";
+        updateActivity(status); updateInlineProgress(status);
+        if(status.phase==="scraping"||status.phase==="complete"){
+            const total=Number(status.total||0), current=Number(status.current||0), completed=Math.max(0,Math.min(total,status.phase==="complete"?total:current-1)), pct=total?Math.round(completed/total*100):0;
+            $("progressStep").classList.remove("hidden"); $("completedCount").textContent=completed; $("errorCount").textContent=Number(status.errors||0); $("progressBar").style.width=`${status.phase==="complete"?100:pct}%`;
+            $("progressLabel").textContent=status.phase==="scraping"?`${current}/${total}: ${status.term||""} — ${status.course||""}`:(status.message||"Complete.");
+            if(status.phase==="complete")updateSelectionSummary();
+        }
+        if(status.latestResult){$("openResultsBtn").href=status.latestResult;$("openResultsBtn").classList.remove("hidden");$("newScrapeBtn").classList.remove("hidden");}
+        if(status.lastError&&status.phase==="error")setError(status.lastError);
+        if(status.connected&&!app.termsLoaded)await loadTermsOnce();
+        $("reconnectBtn").disabled=Boolean(status.busy); updateTermsSummary(); updateSubjectsSummary(); updateSelectionSummary();
+        app.lastPhase=status.phase;
+    }catch(error){$("statusDot").className="dot error";$("statusMessage").textContent="Local server connection lost";$("statusDetail").textContent="Start the scraper again to reconnect.";}
+}
+pollStatus(); setInterval(pollStatus, 400);
+</script>
+</body>
+</html>

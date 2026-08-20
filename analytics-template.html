@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTU Grade Analytics</title>
+<style>
+:root {
+    --red:#cc0000; --red-dark:#980000; --ink:#171717; --muted:#6b7280;
+    --line:#d8dade; --panel:#fff; --bg:#f4f5f7; --soft:#f8f9fb;
+    --good:#18794e; --blue:#2463a9; --purple:#7451a6; --orange:#a15c00; --bad:#b42318;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Segoe UI",Arial,sans-serif}
+header{background:#111;color:#fff;border-bottom:4px solid var(--red)}
+.header-wrap{max-width:1680px;margin:0 auto;padding:20px 24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{margin:0 0 5px;font-size:27px} header p{margin:0;color:#d3d3d3}
+main{max-width:1680px;margin:0 auto;padding:20px 22px 34px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:13px;margin-bottom:16px;overflow:hidden}
+.card-head{padding:14px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.card-head h2,.card-head h3{margin:0}.card-head h2{font-size:19px}.card-head h3{font-size:17px}.card-body{padding:16px 17px}
+.note,.muted{color:var(--muted);font-size:13px;line-height:1.45}
+button,.button-link{border:1px solid #aaa;background:#fff;color:#111;border-radius:8px;padding:8px 11px;font:inherit;font-weight:650;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+button:hover,.button-link:hover{background:#eee}.primary{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important}.primary:hover{background:var(--red-dark)!important}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.header-actions .button-link{background:#fff;border-color:#fff}
+.filters{display:grid;grid-template-columns:repeat(5,minmax(150px,1fr));gap:10px}
+label{display:block;font-size:13px;color:var(--muted)}select,input[type="search"]{width:100%;margin-top:5px;border:1px solid #aaa;border-radius:8px;padding:9px 10px;background:#fff;font:inherit;color:#111}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}.metric{background:#fff;border:1px solid var(--line);border-radius:11px;padding:13px 14px}.metric span{color:var(--muted);font-size:12px}.metric strong{display:block;margin-top:5px;font-size:24px}
+.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:14px}th,td{border-bottom:1px solid #e0e0e0;padding:9px 10px;text-align:right;white-space:nowrap}th{background:#ededed;font-weight:700;position:sticky;top:0;z-index:1}th.left,td.left{text-align:left}th.sortable{cursor:pointer;user-select:none}th.sortable:hover{background:#e2e2e2}.rank{text-align:center;font-weight:750}
+.icon-btn{width:32px;height:32px;padding:0;border-radius:999px;font-size:17px;line-height:1}.icon-cell{text-align:center}.rmp-link{padding:6px 9px;font-size:12px}.empty{padding:18px;text-align:left;color:var(--muted)}
+.detail-panel{display:none}.detail-panel.visible{display:block}.detail-hero{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap}.detail-title{margin:0;font-size:25px}.detail-subtitle{margin-top:5px;color:var(--muted)}
+.profile-metrics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:9px;margin-top:15px}.profile-metric{border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:11px 12px}.profile-metric span{display:block;color:var(--muted);font-size:12px}.profile-metric strong{display:block;margin-top:4px;font-size:20px}
+.chart-grid{display:grid;grid-template-columns:1.4fr .8fr;gap:14px;margin-top:14px}.chart-card{border:1px solid var(--line);border-radius:11px;padding:14px;background:#fff;min-width:0}.chart-title{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin-bottom:8px;flex-wrap:wrap}.chart-title h3{margin:0;font-size:16px}.chart-title span{font-size:12px;color:var(--muted)}#gradeCurveSvg{display:block;width:100%;height:auto}
+.donut-wrap{display:grid;grid-template-columns:150px 1fr;gap:16px;align-items:center}.donut{width:145px;height:145px;border-radius:50%;position:relative;background:#eee}.donut::after{content:"";position:absolute;inset:27px;background:#fff;border-radius:50%;border:1px solid #eee}.donut-center{position:absolute;inset:0;display:grid;place-items:center;z-index:2;text-align:center;pointer-events:none}.donut-center strong{font-size:20px}.donut-center span{display:block;font-size:11px;color:var(--muted);margin-top:2px}.legend{display:grid;gap:7px}.legend-row{display:grid;grid-template-columns:10px 24px 1fr auto;align-items:center;gap:7px;font-size:13px}.swatch{width:10px;height:10px;border-radius:2px}
+.history{margin-top:14px;border:1px solid var(--line);border-radius:11px;overflow:hidden}.history .card-head{border-bottom:1px solid var(--line)}
+.summary-row{font-weight:700;background:#f2f2f2}.error-row{background:#fff0f0;color:var(--bad)}details summary{cursor:pointer;font-weight:700}.raw-tools{display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px;flex-wrap:wrap}
+.badge{display:inline-block;border-radius:999px;background:#eee;padding:3px 8px;font-size:12px}.adjust-note{margin-top:10px;padding:9px 11px;background:#fafafa;border:1px solid #e5e5e5;border-radius:8px}
+footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);font-size:13px}
+@media(max-width:1050px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.chart-grid{grid-template-columns:1fr}}
+@media(max-width:650px){main{padding:12px}.header-wrap{padding:17px 14px}.filters,.profile-metrics,.metrics{grid-template-columns:1fr 1fr}.donut-wrap{grid-template-columns:1fr;justify-items:center}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-wrap">
+    <div><h1>TTU Grade Analytics</h1><p>Compare courses and professors across the terms you scraped.</p></div>
+    <div class="header-actions"><a class="button-link" href="/">← Back to Grade Scraper</a></div>
+  </div>
+</header>
+<main>
+  <section class="card">
+    <div class="card-head">
+      <div><h2>Explore</h2><div class="note">Nothing opens automatically. Use the ↗ icon beside a professor or course when you want a detailed analysis.</div></div>
+      <div class="actions"><button id="resetFilters">Reset filters</button><button id="exportCsv" class="primary">Export filtered CSV</button></div>
+    </div>
+    <div class="card-body">
+      <div class="filters">
+        <label>Term<select id="termFilter"></select></label>
+        <label>Subject<select id="subjectFilter"></select></label>
+        <label>Course<select id="courseFilter"></select></label>
+        <label>Professor<select id="professorFilter"></select></label>
+        <label>Search<input id="searchFilter" type="search" placeholder="Professor, course, subject..."></label>
+      </div>
+    </div>
+  </section>
+
+  <div class="metrics">
+    <div class="metric"><span>Professors shown</span><strong id="metricProfessors">—</strong></div>
+    <div class="metric"><span>Courses shown</span><strong id="metricCourses">—</strong></div>
+    <div class="metric"><span>Students represented</span><strong id="metricStudents">—</strong></div>
+    <div class="metric"><span>Estimated GPA</span><strong id="metricGPA">—</strong></div>
+  </div>
+
+  <section id="detailPanel" class="card detail-panel">
+    <div class="card-body">
+      <div class="detail-hero">
+        <div><h2 id="detailTitle" class="detail-title"></h2><div id="detailSubtitle" class="detail-subtitle"></div></div>
+        <div class="actions"><a id="detailRmpLink" class="button-link primary" target="_blank" rel="noopener noreferrer">RMP ↗</a><button id="closeDetail">Close analysis</button></div>
+      </div>
+      <div class="profile-metrics">
+        <div class="profile-metric"><span>Estimated GPA</span><strong id="detailGPA">—</strong></div>
+        <div class="profile-metric"><span>A rate</span><strong id="detailA">—</strong></div>
+        <div class="profile-metric"><span>ABC rate</span><strong id="detailABC">—</strong></div>
+        <div class="profile-metric"><span>DFW rate</span><strong id="detailDFW">—</strong></div>
+        <div class="profile-metric"><span>Students</span><strong id="detailStudents">—</strong></div>
+        <div class="profile-metric"><span id="detailCountLabel">Sections</span><strong id="detailCount">—</strong></div>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-card">
+          <div class="chart-title"><h3>Estimated grade distribution</h3><span>Estimate from A/B/C/D/F buckets</span></div>
+          <svg id="gradeCurveSvg" viewBox="0 0 760 285" role="img" aria-label="Estimated grade distribution curve"></svg>
+          <div class="note">Estimate only. The curve maps F≈50, D≈65, C≈75, B≈85, and A≈95 because Cognos provides letter-grade counts, not individual numeric scores.</div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title"><h3>Letter-grade mix</h3><span>A through F</span></div>
+          <div class="donut-wrap">
+            <div style="position:relative"><div id="gradeDonut" class="donut"></div><div class="donut-center"><div><strong id="donutTotal">0</strong><span>letter grades</span></div></div></div>
+            <div id="gradeLegend" class="legend"></div>
+          </div>
+        </div>
+      </div>
+      <div class="history">
+        <div class="card-head"><h3 id="historyTitle">History</h3></div>
+        <div class="table-wrap"><table id="historyTable"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>Professor rankings</h2><div class="note">Aggregated across the current filters. Adjusted GPA accounts for class size and course context.</div></div></div>
+    <div class="table-wrap"><table id="professorTable"><thead><tr>
+      <th class="left sortable" data-key="instructor">Professor</th><th class="sortable" data-key="courses">Course-term pairs</th><th class="sortable" data-key="terms">Terms</th><th class="sortable" data-key="students">Students</th><th class="sortable" data-key="gpa">GPA</th><th class="sortable" data-key="adjustedGpa">Adjusted GPA</th><th class="sortable" data-key="aRate">A %</th><th class="sortable" data-key="dfwRate">DFW %</th><th>View</th><th>RMP</th>
+    </tr></thead><tbody></tbody></table></div>
+    <div class="card-body"><div class="adjust-note note"><strong>Adjusted GPA:</strong> each professor/course/term result is shrunk toward that course-term average with a 25-student prior, then combined using the number of graded students. This reduces tiny-class outliers without ignoring large classes.</div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>Courses</h2><div class="note">One row per subject + course. Use ↗ to see every scraped term and professor for that course.</div></div></div>
+    <div class="table-wrap"><table id="courseTable"><thead><tr>
+      <th class="left sortable" data-key="subject">Subject</th><th class="left sortable" data-key="course">Course</th><th class="sortable" data-key="terms">Terms</th><th class="sortable" data-key="professors">Professors</th><th class="sortable" data-key="students">Students</th><th class="sortable" data-key="gpa">GPA</th><th class="sortable" data-key="aRate">A %</th><th class="sortable" data-key="dfwRate">DFW %</th><th>View</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>Professor by course and term</h2><div class="note">Fairer same-course comparisons. Ranking defaults to sample-size-adjusted GPA within each term + course.</div></div></div>
+    <div class="table-wrap"><table id="detailRanking"><thead><tr>
+      <th>#</th><th class="left sortable" data-key="term">Term</th><th class="left sortable" data-key="subject">Subject</th><th class="left sortable" data-key="course">Course</th><th class="left sortable" data-key="instructor">Professor</th><th class="sortable" data-key="students">Students</th><th class="sortable" data-key="gpa">GPA</th><th class="sortable" data-key="adjustedGpa">Adjusted GPA</th><th class="sortable" data-key="aRate">A %</th><th class="sortable" data-key="dfwRate">DFW %</th><th>View</th>
+    </tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Raw Cognos data</h2></div>
+    <div class="card-body"><details><summary>Show raw rows</summary><div class="table-wrap" style="margin-top:12px"><table id="rawTable"><thead><tr><th class="left">Term</th><th class="left">Subject</th><th class="left">Course</th><th class="left">Instructor</th><th>Section</th><th>A</th><th>B</th><th>C</th><th>D</th><th>F</th><th>I</th><th>CR</th><th>P</th><th>NC</th><th>PR</th><th>W</th><th>O</th></tr></thead><tbody></tbody></table></div></details></div>
+  </section>
+</main>
+<footer>Grade curves are estimates from letter-grade buckets. Historical grade distributions are useful context, but they do not establish instructor quality by themselves.</footer>
+<script>
+const DATA = __DATA_JSON__;
+const ALL_ROWS = __ALL_ROWS_JSON__;
+const PRIOR_N = 25;
+const RMP_SCHOOL_ID = '1011';
+const COLORS={A:'#18794e',B:'#2463a9',C:'#7451a6',D:'#a15c00',F:'#b42318'};
+const $=id=>document.getElementById(id);
+const num=v=>Number(v)||0;
+const uniq=arr=>Array.from(new Set(arr.filter(Boolean))).sort((a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true}));
+const state={profSort:{key:'adjustedGpa',dir:-1},courseSort:{key:'course',dir:1},detailSort:{key:'adjustedGpa',dir:-1},detail:null};
+function pct(n,d){return d?100*n/d:null} function fp(v){return v==null?'—':v.toFixed(1)+'%'} function fg(v){return v==null?'—':v.toFixed(2)}
+function addCounts(t,r){['A','B','C','D','F','I','CR','P','NC','PR','W','O'].forEach(k=>t[k]=(t[k]||0)+num(r[k]))}
+function finalize(x){const letters=num(x.A)+num(x.B)+num(x.C)+num(x.D)+num(x.F);const dfwDen=letters+num(x.W);x.gpaN=letters;x.students=['A','B','C','D','F','I','CR','P','NC','PR','W','O'].reduce((s,k)=>s+num(x[k]),0);x.aRate=pct(num(x.A),letters);x.abcRate=pct(num(x.A)+num(x.B)+num(x.C),letters);x.dfwRate=pct(num(x.D)+num(x.F)+num(x.W),dfwDen);x.gpa=letters?(4*num(x.A)+3*num(x.B)+2*num(x.C)+num(x.D))/letters:null;return x}
+function termValue(term){const m=String(term||'').match(/(Spring|Summer|Fall|Winter)\s+(\d{4})/i);if(!m)return 0;const season={winter:0,spring:1,summer:2,fall:3}[m[1].toLowerCase()]??0;return Number(m[2])*10+season}
+function displayName(name){const s=String(name||'').trim();if(!s.includes(','))return s;const p=s.split(',');return (p.slice(1).join(',').trim()+' '+p[0].trim()).trim()}
+function rmpUrl(name){return 'https://www.ratemyprofessors.com/search/professors/'+RMP_SCHOOL_ID+'?q='+encodeURIComponent(displayName(name))}
+function filters(){return{term:$('termFilter').value,subject:$('subjectFilter').value,course:$('courseFilter').value,instructor:$('professorFilter').value,search:$('searchFilter').value.trim().toLowerCase()}}
+function matches(r,f){if(f.term&&r.term!==f.term)return false;if(f.subject&&r.subject!==f.subject)return false;if(f.course&&r.course!==f.course)return false;if(f.instructor&&r.instructor!==f.instructor)return false;if(f.search&&!([r.term,r.subject,r.course,r.instructor,r.section].join(' ').toLowerCase().includes(f.search)))return false;return true}
+function filtered(){const f=filters();return DATA.filter(r=>matches(r,f))}
+function fillSelect(id,values,label){const el=$(id),old=el.value;el.innerHTML='';const o=document.createElement('option');o.value='';o.textContent=label;el.appendChild(o);uniq(values).forEach(v=>{const x=document.createElement('option');x.value=v;x.textContent=v;el.appendChild(x)});if([...el.options].some(o=>o.value===old))el.value=old}
+function refreshFilters(){const f=filters();const tr=DATA.filter(r=>!f.term||r.term===f.term);const sr=tr.filter(r=>!f.subject||r.subject===f.subject);const cr=sr.filter(r=>!f.course||r.course===f.course);fillSelect('subjectFilter',tr.map(r=>r.subject),'All subjects');fillSelect('courseFilter',sr.map(r=>r.course),'All courses');fillSelect('professorFilter',cr.map(r=>r.instructor),'All professors')}
+function detailed(rows){const map=new Map();rows.forEach(r=>{const k=[r.term,r.subject,r.course,r.instructor].join('||');if(!map.has(k))map.set(k,{term:r.term,subject:r.subject,course:r.course,instructor:r.instructor,sectionsSet:new Set()});const x=map.get(k);x.sectionsSet.add(r.section||'');addCounts(x,r)});const items=Array.from(map.values()).map(x=>{x.sections=x.sectionsSet.size;delete x.sectionsSet;return finalize(x)});const groups=new Map();items.forEach(x=>{const k=[x.term,x.subject,x.course].join('||');if(!groups.has(k))groups.set(k,[]);groups.get(k).push(x)});groups.forEach(g=>{let n=0,p=0;g.forEach(x=>{if(x.gpa!=null){n+=x.gpaN;p+=x.gpa*x.gpaN}});const mean=n?p/n:null;g.forEach(x=>{x.courseMean=mean;x.adjustedGpa=x.gpa==null?null:(x.gpaN/(x.gpaN+PRIOR_N))*x.gpa+(PRIOR_N/(x.gpaN+PRIOR_N))*mean});g.sort((a,b)=>(b.adjustedGpa??-1)-(a.adjustedGpa??-1)||(b.gpa??-1)-(a.gpa??-1)||(b.students-a.students));g.forEach((x,i)=>x.rank=i+1)});return items}
+function professors(rows){const det=detailed(rows),map=new Map();det.forEach(d=>{const k=d.instructor||'Unknown';if(!map.has(k))map.set(k,{instructor:k,termsSet:new Set(),coursesSet:new Set(),sections:0,adjNum:0,adjDen:0});const x=map.get(k);x.termsSet.add(d.term);x.coursesSet.add([d.term,d.subject,d.course].join('||'));x.sections+=d.sections;addCounts(x,d);if(d.adjustedGpa!=null&&d.gpaN){x.adjNum+=d.adjustedGpa*d.gpaN;x.adjDen+=d.gpaN}});return Array.from(map.values()).map(x=>{x.terms=x.termsSet.size;x.courses=x.coursesSet.size;x.adjustedGpa=x.adjDen?x.adjNum/x.adjDen:null;delete x.termsSet;delete x.coursesSet;delete x.adjNum;delete x.adjDen;return finalize(x)})}
+function courses(rows){const map=new Map();rows.forEach(r=>{const k=[r.subject,r.course].join('||');if(!map.has(k))map.set(k,{subject:r.subject,course:r.course,termsSet:new Set(),profSet:new Set()});const x=map.get(k);x.termsSet.add(r.term);x.profSet.add(r.instructor);addCounts(x,r)});return Array.from(map.values()).map(x=>{x.terms=x.termsSet.size;x.professors=x.profSet.size;delete x.termsSet;delete x.profSet;return finalize(x)})}
+function aggregate(rows){const x={sectionsSet:new Set()};rows.forEach(r=>{x.sectionsSet.add([r.term,r.subject,r.course,r.section].join('||'));addCounts(x,r)});x.sections=x.sectionsSet.size;delete x.sectionsSet;return finalize(x)}
+function cmp(a,b,key,dir){const av=a[key],bv=b[key];if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return-1;if(typeof av==='number'&&typeof bv==='number')return(av-bv)*dir;return String(av).localeCompare(String(bv),undefined,{numeric:true})*dir}
+function td(text,cls){const e=document.createElement('td');e.textContent=text;if(cls)e.className=cls;return e}
+function icon(handler,title){const b=document.createElement('button');b.type='button';b.className='icon-btn';b.textContent='↗';b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',handler);return b}
+function linkRmp(name){const a=document.createElement('a');a.className='button-link rmp-link';a.href=rmpUrl(name);a.target='_blank';a.rel='noopener noreferrer';a.textContent='RMP ↗';return a}
+function renderMetrics(rows){const p=new Set(rows.map(r=>r.instructor).filter(Boolean)).size,c=new Set(rows.map(r=>[r.subject,r.course].join('||'))).size,agg=aggregate(rows);$('metricProfessors').textContent=p.toLocaleString();$('metricCourses').textContent=c.toLocaleString();$('metricStudents').textContent=agg.students.toLocaleString();$('metricGPA').textContent=fg(agg.gpa)}
+function renderProfessors(rows){let items=professors(rows);items.sort((a,b)=>cmp(a,b,state.profSort.key,state.profSort.dir));const body=$('professorTable').querySelector('tbody');body.innerHTML='';if(!items.length){const tr=document.createElement('tr'),c=td('No professors match these filters.','empty');c.colSpan=10;tr.appendChild(c);body.appendChild(tr);return}items.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.instructor,'left'),td(x.courses),td(x.terms),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));tr.appendChild(v);const r=document.createElement('td');r.appendChild(linkRmp(x.instructor));tr.appendChild(r);body.appendChild(tr)})}
+function renderCourses(rows){let items=courses(rows);items.sort((a,b)=>cmp(a,b,state.courseSort.key,state.courseSort.dir));const body=$('courseTable').querySelector('tbody');body.innerHTML='';if(!items.length){const tr=document.createElement('tr'),c=td('No courses match these filters.','empty');c.colSpan=9;tr.appendChild(c);body.appendChild(tr);return}items.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.subject,'left'),td(x.course,'left'),td(x.terms),td(x.professors),td(x.students),td(fg(x.gpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openCourse(x.subject,x.course),'Analyze course'));tr.appendChild(v);body.appendChild(tr)})}
+function renderDetailRanking(rows){let items=detailed(rows);items.sort((a,b)=>cmp(a,b,state.detailSort.key,state.detailSort.dir));const body=$('detailRanking').querySelector('tbody');body.innerHTML='';if(!items.length){const tr=document.createElement('tr'),c=td('No rows match these filters.','empty');c.colSpan=11;tr.appendChild(c);body.appendChild(tr);return}items.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.rank,'rank'),td(x.term,'left'),td(x.subject,'left'),td(x.course,'left'),td(x.instructor,'left'),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));tr.appendChild(v);body.appendChild(tr)})}
+function curvePath(points){if(points.length<2)return'';let d='M '+points[0][0]+' '+points[0][1];for(let i=0;i<points.length-1;i++){const p0=points[i-1]||points[i],p1=points[i],p2=points[i+1],p3=points[i+2]||p2;const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;d+=' C '+c1x+' '+c1y+', '+c2x+' '+c2y+', '+p2[0]+' '+p2[1]}return d}
+function renderCurve(xitem){const svg=$('gradeCurveSvg');svg.innerHTML='';const NS='http://www.w3.org/2000/svg',W=760,H=285,L=48,R=20,T=34,B=43,cw=W-L-R,ch=H-T-B;const counts={F:num(xitem.F),D:num(xitem.D),C:num(xitem.C),B:num(xitem.B),A:num(xitem.A)},max=Math.max(1,...Object.values(counts));const X=s=>L+s/100*cw,Y=v=>T+ch-v/max*ch;for(let t=0;t<=100;t+=10){const line=document.createElementNS(NS,'line');line.setAttribute('x1',X(t));line.setAttribute('x2',X(t));line.setAttribute('y1',T);line.setAttribute('y2',T+ch);line.setAttribute('stroke','#eeeeee');svg.appendChild(line);if(t%20===0){const tx=document.createElementNS(NS,'text');tx.setAttribute('x',X(t));tx.setAttribute('y',H-16);tx.setAttribute('text-anchor','middle');tx.setAttribute('font-size','11');tx.setAttribute('fill','#666');tx.textContent=t;svg.appendChild(tx)}}[0,.25,.5,.75,1].forEach(f=>{const y=T+ch-f*ch,l=document.createElementNS(NS,'line');l.setAttribute('x1',L);l.setAttribute('x2',W-R);l.setAttribute('y1',y);l.setAttribute('y2',y);l.setAttribute('stroke','#ececec');svg.appendChild(l)});const buckets=[['F',50],['D',65],['C',75],['B',85],['A',95]],pts=[[X(0),Y(0)],...buckets.map(([g,s])=>[X(s),Y(counts[g])]),[X(100),Y(0)]];const path=document.createElementNS(NS,'path');path.setAttribute('d',curvePath(pts));path.setAttribute('fill','none');path.setAttribute('stroke','#cc0000');path.setAttribute('stroke-width','4');path.setAttribute('stroke-linecap','round');path.setAttribute('stroke-linejoin','round');svg.appendChild(path);const axis=document.createElementNS(NS,'text');axis.setAttribute('x',L+cw/2);axis.setAttribute('y',H-2);axis.setAttribute('text-anchor','middle');axis.setAttribute('font-size','12');axis.setAttribute('fill','#666');axis.textContent='Estimated numeric grade (0–100)';svg.appendChild(axis)}
+function renderDonut(x){const grades=['A','B','C','D','F'],vals=grades.map(g=>num(x[g])),total=vals.reduce((a,b)=>a+b,0);$('donutTotal').textContent=total.toLocaleString();let cur=0,stops=[];grades.forEach((g,i)=>{const sh=total?100*vals[i]/total:0,n=cur+sh;stops.push(COLORS[g]+' '+cur+'% '+n+'%');cur=n});$('gradeDonut').style.background=total?'conic-gradient('+stops.join(',')+')':'#eee';const leg=$('gradeLegend');leg.innerHTML='';grades.forEach((g,i)=>{const row=document.createElement('div');row.className='legend-row';const sw=document.createElement('span');sw.className='swatch';sw.style.background=COLORS[g];const gg=document.createElement('strong');gg.textContent=g;const c=document.createElement('span');c.textContent=vals[i].toLocaleString()+' students';const sh=document.createElement('span');sh.textContent=total?(100*vals[i]/total).toFixed(1)+'%':'—';row.append(sw,gg,c,sh);leg.appendChild(row)})}
+function setDetailMetrics(x,countLabel,count){$('detailGPA').textContent=fg(x.gpa);$('detailA').textContent=fp(x.aRate);$('detailABC').textContent=fp(x.abcRate);$('detailDFW').textContent=fp(x.dfwRate);$('detailStudents').textContent=x.students.toLocaleString();$('detailCountLabel').textContent=countLabel;$('detailCount').textContent=Number(count||0).toLocaleString();renderCurve(x);renderDonut(x)}
+function historyHeader(labels){const h=$('historyTable').querySelector('thead');h.innerHTML='';const tr=document.createElement('tr');labels.forEach((l,i)=>{const th=document.createElement('th');th.textContent=l;if(i===0||['Term','Subject','Course','Professor'].includes(l))th.className='left';tr.appendChild(th)});h.appendChild(tr);$('historyTable').querySelector('tbody').innerHTML=''}
+function openProfessor(name){const rows=DATA.filter(r=>r.instructor===name),agg=aggregate(rows),det=detailed(DATA).filter(x=>x.instructor===name).sort((a,b)=>termValue(b.term)-termValue(a.term)||a.course.localeCompare(b.course,undefined,{numeric:true}));state.detail={type:'professor',name};$('detailTitle').textContent=name;$('detailSubtitle').textContent=uniq(rows.map(r=>r.subject)).join(' • ')+' · '+uniq(rows.map(r=>r.term)).length+' term(s) · '+uniq(rows.map(r=>r.course)).length+' course(s)';$('detailRmpLink').style.display='inline-flex';$('detailRmpLink').href=rmpUrl(name);setDetailMetrics(agg,'Sections',agg.sections);$('historyTitle').textContent='Courses and terms taught';historyHeader(['Term','Subject','Course','Sections','Students','GPA','Adjusted GPA','A %','DFW %','View course']);const body=$('historyTable').querySelector('tbody');det.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.term,'left'),td(x.subject,'left'),td(x.course,'left'),td(x.sections),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openCourse(x.subject,x.course),'Analyze course'));tr.appendChild(v);body.appendChild(tr)});$('detailPanel').classList.add('visible');$('detailPanel').scrollIntoView({behavior:'smooth',block:'start'})}
+function openCourse(subject,course){const rows=DATA.filter(r=>r.subject===subject&&r.course===course),agg=aggregate(rows),det=detailed(rows).sort((a,b)=>termValue(b.term)-termValue(a.term)||(b.adjustedGpa??-1)-(a.adjustedGpa??-1));state.detail={type:'course',subject,course};$('detailTitle').textContent=course;$('detailSubtitle').textContent=subject+' · '+uniq(rows.map(r=>r.term)).length+' term(s) · '+uniq(rows.map(r=>r.instructor)).length+' professor(s)';$('detailRmpLink').style.display='none';setDetailMetrics(agg,'Professors',uniq(rows.map(r=>r.instructor)).length);$('historyTitle').textContent='All scraped terms and professors';historyHeader(['Term','Professor','Sections','Students','GPA','Adjusted GPA','A %','DFW %','View professor']);const body=$('historyTable').querySelector('tbody');det.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.term,'left'),td(x.instructor,'left'),td(x.sections),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));tr.appendChild(v);body.appendChild(tr)});$('detailPanel').classList.add('visible');$('detailPanel').scrollIntoView({behavior:'smooth',block:'start'})}
+function renderRaw(){const f=filters(),body=$('rawTable').querySelector('tbody');body.innerHTML='';ALL_ROWS.filter(r=>{if(r.rowType==='error')return(!f.term||r.term===f.term)&&(!f.subject||r.subject===f.subject)&&(!f.course||r.course===f.course);if(r.rowType==='summary'){if(f.instructor)return false;return matches({...r,instructor:'Total',section:''},f)}return matches(r,f)}).forEach(r=>{const tr=document.createElement('tr');if(r.rowType==='summary')tr.className='summary-row';if(r.rowType==='error')tr.className='error-row';tr.append(td(r.term||'','left'),td(r.subject||'','left'),td(r.course||'','left'),td(r.rowType==='summary'?'Total':(r.instructor||''),'left'),td(r.section||''));['A','B','C','D','F','I','CR','P','NC','PR','W','O'].forEach(k=>tr.appendChild(td(r[k]??'')));body.appendChild(tr)})}
+function render(){refreshFilters();const rows=filtered();renderMetrics(rows);renderProfessors(rows);renderCourses(rows);renderDetailRanking(rows);renderRaw()}
+function sortInstall(tableId,obj,renderFn,builder){document.querySelectorAll('#'+tableId+' th.sortable').forEach(th=>th.addEventListener('click',()=>{const k=th.dataset.key;if(obj.key===k)obj.dir*=-1;else{obj.key=k;obj.dir=['term','subject','course','instructor'].includes(k)?1:-1}renderFn(builder(filtered()))}))}
+function csvCell(v){const s=String(v??'');return '"'+s.replace(/"/g,'""')+'"'}
+$('exportCsv').addEventListener('click',()=>{const rows=filtered(),h=['Term','Subject','Course','Instructor','Section','A','B','C','D','F','I','CR','P','NC','PR','W','O'],lines=[h.map(csvCell).join(',')];rows.forEach(r=>lines.push([r.term,r.subject,r.course,r.instructor,r.section,r.A,r.B,r.C,r.D,r.F,r.I,r.CR,r.P,r.NC,r.PR,r.W,r.O].map(csvCell).join(',')));const blob=new Blob([lines.join('\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='TTU_grade_distribution_filtered.csv';a.click();URL.revokeObjectURL(url)});
+$('closeDetail').addEventListener('click',()=>{$('detailPanel').classList.remove('visible');state.detail=null});
+['termFilter','subjectFilter','courseFilter','professorFilter'].forEach(id=>$(id).addEventListener('change',render));$('searchFilter').addEventListener('input',render);$('resetFilters').addEventListener('click',()=>{['termFilter','subjectFilter','courseFilter','professorFilter'].forEach(id=>$(id).value='');$('searchFilter').value='';render()});
+fillSelect('termFilter',DATA.map(r=>r.term),'All terms');fillSelect('subjectFilter',DATA.map(r=>r.subject),'All subjects');fillSelect('courseFilter',DATA.map(r=>r.course),'All courses');fillSelect('professorFilter',DATA.map(r=>r.instructor),'All professors');sortInstall('professorTable',state.profSort,renderProfessors,professors);sortInstall('courseTable',state.courseSort,renderCourses,courses);sortInstall('detailRanking',state.detailSort,renderDetailRanking,detailed);render();
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "ttu-grade-scraper-v2-6",
+  "version": "2.6.0",
+  "description": "Headless local web GUI for Texas Tech Cognos grade distribution scraping, course/professor analytics and visual grade distributions.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "install-browser": "npx playwright install chromium"
+  },
+  "keywords": [
+    "texas-tech",
+    "cognos",
+    "playwright",
+    "grade-distribution"
+  ],
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "playwright": "^1.62.1"
+  }
+}
