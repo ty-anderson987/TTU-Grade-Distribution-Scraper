@@ -106,3 +106,15 @@ sample-size-adjusted GPA rankings.
     Texas Tech session.
 -   Grade-distribution data comes from Texas Tech's Cognos report and
     availability depends on the university's system.
+
+## Disclaimer & Responsible Use
+
+This project is an independent educational/personal project and is not affiliated with, endorsed by, or maintained by Texas Tech University.
+
+The application automates interaction with the existing Texas Tech Grade Distribution portal and requires users to authenticate using their own authorized access. It does not provide access to data or systems that the user is not otherwise authorized to access.
+
+Users are responsible for complying with Texas Tech University policies and any applicable terms of use. Avoid excessive or high-frequency requests that could place unnecessary load on university systems. Large data collections should be performed in smaller batches when appropriate.
+
+The developer is not responsible for account restrictions, rate limiting, service interruptions, or other consequences resulting from improper or excessive use of this software.
+
+This software is provided for educational and informational purposes only.
