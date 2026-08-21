@@ -73,6 +73,14 @@ Run:
 ./start.sh
 ```
 
+## Force Quit
+
+### Windows
+
+``` bash
+taskkill /F /IM node.exe
+```
+
 ## Using the Scraper
 
 1.  Sign in with your Texas Tech credentials if prompted.
