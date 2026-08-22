@@ -73,7 +73,7 @@ if [ -f logs/server.log ]; then
     mv logs/server.log logs/server-prev.log
   fi
 fi
-nohup node server.js >> logs/server.log 2>&1 &
+nohup node server.js > logs/server.log 2>&1 &
 SERVER_PID=$!
 sleep 0.35
 if ! kill -0 "$SERVER_PID" >/dev/null 2>&1; then
