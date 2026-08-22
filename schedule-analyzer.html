@@ -617,7 +617,12 @@ function professorStatText(p){
   return parts.join(' • ')||'No selected-term grade history';
 }
 function professorAvailabilityFor(courseCode,professor){
-  if(!analysis||analysisDirty||analysisRunning||analysisAutoPending)return null;
+  // A completed analysis is valid as soon as analysisDirty is cleared. runAnalyze()
+  // renders the professor cards before its outer finally block clears analysisRunning,
+  // so rejecting solely on analysisRunning made every professor look available until
+  // some unrelated later repaint. Keep hiding availability only while the result itself
+  // is stale/pending.
+  if(!analysis||analysisDirty||analysisAutoPending)return null;
   if(!visibleCourseSet().has(courseCode)||!(analysis.activeCourseCodes||[]).includes(courseCode))return null;
   const key=professor?.key||String(professor?.name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,' ');
   const count=Number(analysis?.professorAvailability?.[courseCode]?.[key]||0);

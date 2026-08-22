@@ -357,12 +357,36 @@ class TTUScheduleScraper {
                 prepare(),
                 new Promise((_, reject) => {
                     workerTimer = setTimeout(() => {
-                        const error = new Error("Parallel Schedule Builder worker startup timed out; using the primary session instead.");
+                        const error = new Error("Parallel Schedule Builder worker startup timed out; discarding this session and requesting a fresh one.");
                         error.code = "PARALLEL_WORKER_UNAVAILABLE";
                         reject(error);
                     }, 12000);
                 })
             ]);
+            if (workerTimer) {
+                clearTimeout(workerTimer);
+                workerTimer = null;
+            }
+
+            // A brand-new VSB application session inherits the account's currently
+            // enrolled/planned courses. READY must mean a truly clean worker: remove
+            // every active row before this session enters the pool. clearExistingCourses()
+            // is deliberately count-agnostic (0, 5, 7, 12, ...), and handles enrolled
+            // rows through VSB's temporary Plan-to-drop state without changing Banner
+            // registration.
+            const cleared = await worker.clearExistingCourses();
+            const remaining = await worker.activeCourseSnapshot();
+            if (remaining.count) {
+                const error = new Error(`Fresh Schedule Builder worker still has ${remaining.count} active pre-existing course${remaining.count === 1 ? "" : "s"} after reset.`);
+                error.code = "PARALLEL_WORKER_UNAVAILABLE";
+                throw error;
+            }
+            worker.status(`Schedule Builder worker reset complete — ${cleared} pre-existing course${cleared === 1 ? "" : "s"} cleared; READY.`, {
+                phase: "schedule-worker-ready",
+                connected: true,
+                clearedCourses: cleared,
+                ready: true
+            });
             return worker;
         } catch (error) {
             await worker.close().catch(() => {});
@@ -500,9 +524,63 @@ class TTUScheduleScraper {
             }
             return { active, terms: [...new Set(values)] };
         });
-        this.terms = data.terms;
+        // The active course-selection page may expose only the current term label,
+        // while the welcome/term page exposes the full term list. Do not accidentally
+        // shrink a worker's known terms to one item during a readiness probe.
+        if (data.terms.length > 1 || !this.terms.length) this.terms = data.terms;
+        else if (data.terms.length === 1 && !this.terms.includes(data.terms[0])) this.terms = [...new Set([...this.terms, data.terms[0]])];
         if (data.active) this.currentTerm = data.active;
         return this.terms;
+    }
+
+    async clickWelcomeContinue(frame) {
+        if (!frame) return false;
+        const clicked = await frame.evaluate(() => {
+            const button = document.querySelector('.reg_welcome input.big_button[value="Continue"]');
+            if (!button) return false;
+            try {
+                if (window.UU && typeof window.UU.caseWelcomeContinue === "function") {
+                    window.UU.caseWelcomeContinue();
+                    return true;
+                }
+            } catch {}
+            try {
+                button.click();
+                return true;
+            } catch {
+                return false;
+            }
+        }).catch(() => false);
+        if (clicked) this.touch();
+        return clicked;
+    }
+
+    async ensureParallelReady(timeoutMs = 7000) {
+        if (!this.context || !this.page) {
+            const error = new Error("Schedule Builder worker browser is no longer running.");
+            error.code = "PARALLEL_WORKER_EXPIRED";
+            throw error;
+        }
+        let state;
+        try {
+            state = await this.waitForState(timeoutMs, ["ready", "welcome", "term-select", "recommendation", "login", "mfa-method", "mfa-code", "blocked"]);
+        } catch (error) {
+            const wrapped = new Error(`Schedule Builder worker did not answer its readiness check: ${error.message}`);
+            wrapped.code = "PARALLEL_WORKER_EXPIRED";
+            throw wrapped;
+        }
+        if (["login", "mfa-method", "mfa-code", "blocked"].includes(state.type)) {
+            const error = new Error("Schedule Builder worker session expired or returned to authentication.");
+            error.code = "PARALLEL_WORKER_EXPIRED";
+            throw error;
+        }
+        const terms = await this.finishConnection(state.page || this.page);
+        if (!terms.length || this.authStep !== "none") {
+            const error = new Error("Schedule Builder worker did not return to a ready course-selection state.");
+            error.code = "PARALLEL_WORKER_EXPIRED";
+            throw error;
+        }
+        return true;
     }
 
     async finishConnection(page) {
@@ -514,8 +592,10 @@ class TTUScheduleScraper {
 
             if (state.type === "welcome") {
                 this.status("Schedule Builder connected. Opening term selection...", { phase: "schedule-welcome", connected: true });
-                await state.frame.locator('.reg_welcome input.big_button[value="Continue"]').click({ force: true });
-                this.touch();
+                if (!(await this.clickWelcomeContinue(state.frame))) {
+                    await delay(120);
+                    continue;
+                }
                 await delay(150);
                 continue;
             }
@@ -708,8 +788,10 @@ class TTUScheduleScraper {
             if (state.page) this.page = state.page;
 
             if (state.type === "welcome") {
-                await state.frame.locator('.reg_welcome input.big_button[value="Continue"]').click({ force: true });
-                this.touch();
+                if (!(await this.clickWelcomeContinue(state.frame))) {
+                    await delay(120);
+                    continue;
+                }
                 await delay(150);
                 continue;
             }
@@ -2001,6 +2083,8 @@ class TTUScheduleScraper {
         courseCode = normalizeCourseCode(courseCode);
         if (!courseCode) throw new Error("Invalid course code.");
         const preliminaryOnly = options.preliminaryOnly === true;
+        const pauseAtResultBoundary = options.pauseAtResultBoundary === true && options.backgroundVerification === true;
+        const innerShouldAbort = pauseAtResultBoundary ? null : options.shouldAbort;
         const statusPhase = options.backgroundVerification === true ? "background-verification" : "schedule-course";
         const abortIfRequested = () => {
             if (typeof options.shouldAbort === "function" && options.shouldAbort()) {
@@ -2038,6 +2122,7 @@ class TTUScheduleScraper {
         let termCalendar = null;
         const sharedDetailCache = options.sharedDetailCache instanceof Map ? options.sharedDetailCache : null;
         const visitedResultIndexes = [];
+        let pausedAtBoundary = false;
 
         const mapOccurrence = (event, variant) => {
             const lower = String(event.kind || "").toLowerCase();
@@ -2159,6 +2244,10 @@ class TTUScheduleScraper {
         }
 
         for (let step = 0; step < rangeCount; step++) {
+            if (pauseAtResultBoundary && step > 0 && typeof options.shouldAbort === "function" && options.shouldAbort()) {
+                pausedAtBoundary = true;
+                break;
+            }
             abortIfRequested();
             const expectedCurrent = reverseResults ? (rangeEnd - step) : (rangeStart + step);
             const currentText = normalizeText(await this.page.locator(".results-current-schedule").first().textContent().catch(() => String(expectedCurrent)));
@@ -2227,7 +2316,7 @@ class TTUScheduleScraper {
                             scanMode: "deep"
                         });
                         const captured = await this.captureDetailedOccurrences(courseCode, result.components, {
-                            shouldAbort: options.shouldAbort,
+                            shouldAbort: innerShouldAbort,
                             onWeekProgress: info => this.status(`Schedule Builder: ${courseCode} option ${current} of ${total} — checking semester week ${info.current}${info.total ? `/${info.total}` : ""} ${info.direction === "backward" ? "(reverse)" : ""}...`, {
                                 phase: statusPhase,
                                 course: courseCode,
@@ -2254,7 +2343,7 @@ class TTUScheduleScraper {
                         // timetable signature in the selected term.
                         fastReads++;
                         if (!termCalendar) termCalendar = await this.captureTermCalendar(term, {
-                            shouldAbort: options.shouldAbort,
+                            shouldAbort: innerShouldAbort,
                             phase: statusPhase,
                             course: courseCode,
                             onWeekProgress: info => this.status(`Schedule Builder: ${courseCode} option ${current} of ${total} — mapping semester week ${info.current}${info.total ? `/${info.total}` : ""}...`, {
@@ -2310,6 +2399,10 @@ class TTUScheduleScraper {
                 scanMode: preliminaryOnly ? "preliminary" : (result.needsDeepScan ? "deep" : "fast")
             });
             if (step >= rangeCount - 1) break;
+            if (pauseAtResultBoundary && typeof options.shouldAbort === "function" && options.shouldAbort()) {
+                pausedAtBoundary = true;
+                break;
+            }
 
             const advanced = reverseResults ? await previousResult(current) : await nextResult(current);
             if (!advanced) {
@@ -2324,8 +2417,9 @@ class TTUScheduleScraper {
             totalReported: total,
             totalCaptured: results.length,
             truncated: total > limit,
-            scanComplete: !preliminaryOnly && rangeStart === 1 && rangeEnd === limit && limit === total,
-            rangeComplete: !preliminaryOnly,
+            scanComplete: !preliminaryOnly && !pausedAtBoundary && rangeStart === 1 && rangeEnd === limit && limit === total,
+            rangeComplete: !preliminaryOnly && !pausedAtBoundary && visitedResultIndexes.length >= rangeCount,
+            paused: pausedAtBoundary,
             resultRange: { start: rangeStart, end: rangeEnd, direction: reverseResults ? "backward" : "forward" },
             preliminary: preliminaryOnly,
             scanStats: { deepScans, fastReads, reusedDetailed, uniqueTimetablePatterns: detailCache.size },

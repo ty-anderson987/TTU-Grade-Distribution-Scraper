@@ -10,6 +10,7 @@ const schedule = fs.readFileSync(path.join(root, 'schedule-analyzer.html'), 'utf
 const analytics = fs.readFileSync(path.join(root, 'analytics-template.html'), 'utf8');
 const compare = fs.readFileSync(path.join(root, 'compare-template.html'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'server.js'), 'utf8');
+const scheduleScraper = fs.readFileSync(path.join(root, 'schedule-scraper.js'), 'utf8');
 const pkg = require('./package.json');
 
 assert.strictEqual(pkg.version, '3.1.1');
@@ -18,6 +19,8 @@ assert.ok(analytics.includes('function rmpHasRatings(rmp)'), 'Grade Analytics mu
 assert.ok(compare.includes('function rmpHasRatings(rmp)'), 'Professor Comparison must guard unrated RMP profiles');
 assert.ok(schedule.includes('Full-semester scan complete — refreshing ranked calendar from verified timetable data…'), 'verified scan completion must carry into ranking refresh status');
 assert.ok(schedule.includes('Full-semester scan complete — ranked calendar refreshed with verified timetable data.'), 'verified completion must remain visible after refresh');
+assert.ok(schedule.includes('if(!analysis||analysisDirty||analysisAutoPending)return null;'), 'completed professor availability must render even before runAnalyze clears its outer analysisRunning flag');
+assert.ok(!schedule.includes('if(!analysis||analysisDirty||analysisRunning||analysisAutoPending)return null;'), 'professor availability must not be suppressed by the transient analysisRunning flag after completion');
 assert.ok(schedule.includes('Profile ↗</button><a class="button small"'), 'schedule cards must label the professor profile action and keep RMP beside it');
 assert.ok(schedule.includes('data-result-pin-course='), 'recommended schedule cards must be clickable pin targets');
 assert.ok(schedule.includes("toggleCoursePin(card.dataset.resultPinCourse,card.dataset.resultPinOption)"), 'card pinning must reuse the calendar pin logic');
@@ -36,5 +39,9 @@ assert.ok(server.includes('Wait until every checked course has a fast timetable 
 assert.ok(server.includes('async function requestV3SchedulePrefetch()'), 'server must support opportunistic fast-timetable prefetch');
 assert.ok(server.includes('New courses added while Cognos'), 'prefetch implementation must document Cognos-independent schedule loading');
 assert.ok(server.includes('retrying fast timetable on primary VSB before grade-history processing continues'), 'isolated fast-load misses must receive an immediate primary repair attempt');
+assert.ok(scheduleScraper.includes('const cleared = await worker.clearExistingCourses();'), 'new isolated VSB workers must clear all pre-existing courses before entering the pool');
+assert.ok(scheduleScraper.includes('Schedule Builder worker reset complete — ${cleared} pre-existing course'), 'worker READY status must be emitted only after the dynamic VSB reset');
+assert.ok(server.includes('Closing this VSB session; a fresh session will be requested when capacity is needed.'), 'expired VSB workers must be retired instead of reused');
+assert.ok(server.includes('READY workers will resume only the unfinished results.'), 'deep verification must checkpoint work for resumable worker scheduling');
 
 console.log('Release UI/concurrency consistency tests passed');

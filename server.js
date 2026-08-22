@@ -10,7 +10,7 @@ const { TTUGradeScraper, normalizeText } = require("./scraper");
 const { TTUScheduleScraper } = require("./schedule-scraper");
 const { CacheStore } = require("./cache-store");
 const { RmpClient } = require("./rmp-client");
-const { planParallelRanges, mergeParallelVerifiedOptions, partCoversRange } = require("./parallel-utils");
+const { planRemainingRanges, mergeParallelVerifiedOptions, partCoversRange } = require("./parallel-utils");
 const { parseCourseList, normalizeCourseCode, analyzeSchedules, termValue, buildGradeSummary, instructorKey, optionDeliveryMode, optionIsHonors, primaryOptionComponents } = require("./schedule-engine");
 
 const HOST = "127.0.0.1";
@@ -102,80 +102,147 @@ const MIN_PARALLEL_DEEP_RESULTS = 8;
 const MIN_THREE_WAY_DEEP_RESULTS = 24;
 const MIN_FOUR_WAY_DEEP_RESULTS = 60;
 const MIN_FIVE_WAY_DEEP_RESULTS = 100;
+const SCHEDULE_WORKER_START_ATTEMPTS = 3;
+const SCHEDULE_WORKER_RETRY_DELAY_MS = 450;
 let scheduleWorkerPool = [];
-let scheduleWorkerPoolDisabledUntil = 0;
 let scheduleWorkerPoolStartup = null;
+let nextScheduleWorkerSerial = 2;
 let activeParallelVerificationProgress = null;
 
-async function closeScheduleWorkerPool() {
-    // If a worker is halfway through startup, let that startup settle first so a
-    // just-created browser cannot escape the close and linger in the background.
-    if (scheduleWorkerPoolStartup) {
-        await scheduleWorkerPoolStartup.catch(() => {});
-    }
-    const workers = scheduleWorkerPool;
-    scheduleWorkerPool = [];
-    await Promise.allSettled(workers.map(worker => worker.close()));
+function scheduleWorkerName(worker) {
+    if (!worker || worker === scheduleScraper) return "primary";
+    return `worker-${worker.__workerNumber || "?"}`;
 }
 
-async function ensureScheduleWorkerPool(count) {
+function setScheduleWorkerState(worker, state, job = "") {
+    if (!worker) return;
+    worker.__workerState = state;
+    worker.__workerJob = job || "";
+    worker.__workerStateAt = Date.now();
+}
+
+function logScheduleWorkerIdentities() {
+    const workers = [scheduleScraper, ...scheduleWorkerPool.filter(worker => !worker.__parallelBroken)];
+    const identities = workers
+        .map(worker => `${scheduleWorkerName(worker)}=${worker.vsbSessionMarker || "unmarked"}/${worker.vsbSessionCookieFingerprint || "unknown"}`)
+        .join(" | ");
+    const fingerprints = workers
+        .map(worker => worker.vsbSessionCookieFingerprint)
+        .filter(value => value && value !== "none");
+    const uniqueFingerprints = new Set(fingerprints);
+    const fingerprintNote = fingerprints.length < 2
+        ? "server-cookie uniqueness not yet comparable"
+        : uniqueFingerprints.size === fingerprints.length
+            ? "server-cookie fingerprints are distinct"
+            : "WARNING: duplicate server-cookie fingerprint detected";
+    console.log(`[schedule-workers] Worker pool READY (${workers.length}/${MAX_SCHEDULE_PREFETCH_WORKERS} total VSB sessions). Session identities: ${identities}. ${fingerprintNote}.`);
+}
+
+async function retireScheduleWorker(worker, reason = "worker retired") {
+    if (!worker || worker === scheduleScraper) return;
+    const name = scheduleWorkerName(worker);
+    worker.__parallelBroken = true;
+    setScheduleWorkerState(worker, "failed", reason);
+    scheduleWorkerPool = scheduleWorkerPool.filter(candidate => candidate !== worker);
+    console.warn(`[schedule-${name}] FAILED — ${reason}. Closing this VSB session; a fresh session will be requested when capacity is needed.`);
+    await worker.close().catch(() => {});
+    setScheduleWorkerState(worker, "closed", reason);
+}
+
+async function validateScheduleWorker(worker) {
+    if (!worker || worker === scheduleScraper) return true;
+    try {
+        await worker.ensureParallelReady(7000);
+        return true;
+    } catch (error) {
+        await retireScheduleWorker(worker, error?.message || String(error));
+        throw error;
+    }
+}
+
+async function runScheduleWorkerJob(worker, jobLabel, task, options = {}) {
+    const name = scheduleWorkerName(worker);
+    if (worker !== scheduleScraper && options.validate !== false) await validateScheduleWorker(worker);
+    setScheduleWorkerState(worker, "busy", jobLabel);
+    try {
+        const value = await task();
+        setScheduleWorkerState(worker, "ready", "");
+        if (options.logReady !== false) {
+            const verb = value?.paused ? "YIELDED" : "COMPLETE";
+            console.log(`[schedule-${name}] ${verb} ${jobLabel}; READY.`);
+        }
+        return value;
+    } catch (error) {
+        if (!worker.__parallelBroken) setScheduleWorkerState(worker, "ready", "");
+        throw error;
+    }
+}
+
+async function startFreshScheduleWorker() {
+    let lastError = null;
+    for (let attempt = 1; attempt <= SCHEDULE_WORKER_START_ATTEMPTS; attempt++) {
+        const workerNumber = nextScheduleWorkerSerial++;
+        const statusBridge = { handler: null };
+        try {
+            console.log(`[schedule-workers] Requesting fresh worker-${workerNumber} (startup attempt ${attempt}/${SCHEDULE_WORKER_START_ATTEMPTS})...`);
+            const worker = await scheduleScraper.createParallelWorker({
+                sessionLabel: `worker-${workerNumber}`,
+                onStatus(update) {
+                    if (update.message) console.log(`[schedule-worker-${workerNumber}] ${update.message}`);
+                    if (typeof statusBridge.handler === "function") statusBridge.handler(update);
+                }
+            });
+            worker.__workerNumber = workerNumber;
+            worker.__statusBridge = statusBridge;
+            worker.__parallelBroken = false;
+            setScheduleWorkerState(worker, "ready", "");
+            return worker;
+        } catch (error) {
+            lastError = error;
+            console.warn(`[schedule-workers] worker-${workerNumber} startup failed (${attempt}/${SCHEDULE_WORKER_START_ATTEMPTS}): ${error?.message || error}. The failed browser/session was closed; requesting a new VSB session${attempt < SCHEDULE_WORKER_START_ATTEMPTS ? " next" : " later"}.`);
+            if (attempt < SCHEDULE_WORKER_START_ATTEMPTS) {
+                await new Promise(resolve => setTimeout(resolve, SCHEDULE_WORKER_RETRY_DELAY_MS));
+            }
+        }
+    }
+    return { __startupFailure: lastError || new Error("Schedule Builder worker startup failed.") };
+}
+
+async function closeScheduleWorkerPool() {
+    if (scheduleWorkerPoolStartup) await scheduleWorkerPoolStartup.catch(() => {});
+    const workers = scheduleWorkerPool;
+    scheduleWorkerPool = [];
+    await Promise.allSettled(workers.map(worker => {
+        setScheduleWorkerState(worker, "closed", "pool closed");
+        return worker.close();
+    }));
+}
+
+async function ensureScheduleWorkerPool(count, pass = 0) {
     const wanted = Math.max(0, Math.min(MAX_SCHEDULE_PREFETCH_WORKERS - 1, Number(count) || 0));
     if (!wanted) return [];
+
+    scheduleWorkerPool = scheduleWorkerPool.filter(worker => !worker.__parallelBroken && worker.__workerState !== "closed");
     if (scheduleWorkerPool.length >= wanted) return scheduleWorkerPool.slice(0, wanted);
-    if (Date.now() < scheduleWorkerPoolDisabledUntil) return scheduleWorkerPool.slice(0, wanted);
 
     // Prefetch, verification, and reconnect paths can all ask for workers. Serialize
-    // creation so two near-simultaneous callers can never launch duplicate Chromium
-    // workers beyond the configured 5-session cap.
+    // capacity growth, but every failed startup is disposable: createParallelWorker()
+    // closes that browser/context and this loop asks TTU/VSB for a brand-new session.
     if (!scheduleWorkerPoolStartup) {
         scheduleWorkerPoolStartup = (async () => {
-            const needed = wanted - scheduleWorkerPool.length;
-            if (needed <= 0) return;
-            const base = scheduleWorkerPool.length;
-            console.log(`[schedule-workers] Starting ${needed} isolated Schedule Builder worker${needed === 1 ? "" : "s"}; ${1 + scheduleWorkerPool.length + needed} total VSB session${1 + scheduleWorkerPool.length + needed === 1 ? "" : "s"}.`);
-            const attempts = Array.from({ length: needed }, (_, offset) => {
-                const workerNumber = base + offset + 2;
-                const statusBridge = { handler: null };
-                return scheduleScraper.createParallelWorker({
-                    sessionLabel: `worker-${workerNumber}`,
-                    onStatus(update) {
-                        if (update.message) console.log(`[schedule-worker-${workerNumber}] ${update.message}`);
-                        if (typeof statusBridge.handler === "function") statusBridge.handler(update);
-                    }
-                }).then(worker => {
-                    worker.__workerNumber = workerNumber;
-                    worker.__statusBridge = statusBridge;
-                    return worker;
-                });
-            });
-            const settled = await Promise.allSettled(attempts);
-            let failed = 0;
+            const needed = Math.max(0, wanted - scheduleWorkerPool.length);
+            if (!needed) return;
+            console.log(`[schedule-workers] Need ${needed} more isolated VSB worker${needed === 1 ? "" : "s"}; growing toward ${1 + wanted} total sessions.`);
+            const settled = await Promise.all(Array.from({ length: needed }, () => startFreshScheduleWorker()));
             for (const result of settled) {
-                if (result.status === "fulfilled") {
-                    if (scheduleWorkerPool.length < MAX_SCHEDULE_PREFETCH_WORKERS - 1) {
-                        scheduleWorkerPool.push(result.value);
-                        const identities = [scheduleScraper, ...scheduleWorkerPool]
-                            .map((worker, index) => `${index === 0 ? "primary" : `worker-${worker.__workerNumber || index + 1}`}=${worker.vsbSessionMarker || "unmarked"}/${worker.vsbSessionCookieFingerprint || "unknown"}`)
-                            .join(" | ");
-                        const fingerprints = [scheduleScraper, ...scheduleWorkerPool]
-                            .map(worker => worker.vsbSessionCookieFingerprint)
-                            .filter(value => value && value !== "none");
-                        const uniqueFingerprints = new Set(fingerprints);
-                        const fingerprintNote = fingerprints.length < 2
-                            ? "server-cookie uniqueness not yet comparable"
-                            : uniqueFingerprints.size === fingerprints.length
-                                ? "server-cookie fingerprints are distinct"
-                                : "WARNING: duplicate server-cookie fingerprint detected";
-                        console.log(`[schedule-workers] Isolated worker ready (${scheduleWorkerPool.length + 1}/${MAX_SCHEDULE_PREFETCH_WORKERS} total VSB sessions). Session identities: ${identities}. ${fingerprintNote}.`);
-                    } else {
-                        await result.value.close().catch(() => {});
-                    }
-                } else {
-                    failed++;
-                    console.warn(`[schedule-workers] Parallel worker unavailable; primary VSB remains active: ${result.reason?.message || result.reason}`);
+                if (result?.__startupFailure) {
+                    console.warn(`[schedule-workers] Fresh worker capacity is still unavailable: ${result.__startupFailure.message || result.__startupFailure}`);
+                    continue;
                 }
+                if (scheduleWorkerPool.length < MAX_SCHEDULE_PREFETCH_WORKERS - 1) scheduleWorkerPool.push(result);
+                else await result.close().catch(() => {});
             }
-            if (failed) scheduleWorkerPoolDisabledUntil = Date.now() + 60 * 1000;
+            if (scheduleWorkerPool.length) logScheduleWorkerIdentities();
         })();
     }
 
@@ -185,11 +252,9 @@ async function ensureScheduleWorkerPool(count) {
         scheduleWorkerPoolStartup = null;
     }
 
-    // A first caller may have requested only one extra worker while a second caller
-    // arrived wanting two. Make one bounded follow-up pass instead of racing startups.
-    if (scheduleWorkerPool.length < wanted && Date.now() >= scheduleWorkerPoolDisabledUntil) {
-        return await ensureScheduleWorkerPool(wanted);
-    }
+    // Missing slots remain eligible for a fresh retry the next time the high-priority
+    // queue drains or a deep verifier asks for capacity. Do not hammer TTU with another
+    // immediate full wave after the per-slot fresh-session retries above.
     return scheduleWorkerPool.slice(0, wanted);
 }
 
@@ -480,7 +545,7 @@ function enqueueV3Verification(courseCode) {
     pumpV3VerificationQueue().catch(error => console.error("[v3 verification]", error));
 }
 
-function createParallelVerificationProgress(courseCode, ranges, total) {
+function createParallelVerificationProgress(courseCode, ranges, total, alreadyCompleted = 0) {
     const workerFractions = new Map();
     const rangeSizes = ranges.map(range => Math.max(1, range.end - range.start + 1));
     const totalWeight = rangeSizes.reduce((sum, value) => sum + value, 0) || Math.max(1, total);
@@ -510,8 +575,9 @@ function createParallelVerificationProgress(courseCode, ranges, total) {
             weighted += (workerFractions.get(index) || 0) * rangeSizes[index];
         }
         const fraction = Math.max(0, Math.min(1, weighted / totalWeight));
-        const verifiedPositions = Math.min(total, Math.floor(fraction * total));
-        const summaryBucket = Math.floor(fraction * 10);
+        const verifiedPositions = Math.min(total, Math.max(0, Number(alreadyCompleted || 0)) + Math.floor(fraction * totalWeight));
+        const overallFraction = total > 0 ? Math.max(0, Math.min(1, verifiedPositions / total)) : fraction;
+        const summaryBucket = Math.floor(overallFraction * 10);
         if (summaryBucket > lastSummaryBucket && summaryBucket > 0) {
             lastSummaryBucket = summaryBucket;
             const lanes = ranges.map((_, index) => {
@@ -527,7 +593,7 @@ function createParallelVerificationProgress(courseCode, ranges, total) {
             status: "running",
             current: verifiedPositions,
             total,
-            percent: Math.max(4, Math.min(96, Math.round(4 + fraction * 92))),
+            percent: Math.max(4, Math.min(96, Math.round(4 + overallFraction * 92))),
             message: `Parallel full-semester scan — ${verifiedPositions}/${total} VSB results verified across ${ranges.length} sessions.`
         });
         v3Courses.set(courseCode, record);
@@ -536,45 +602,165 @@ function createParallelVerificationProgress(courseCode, ranges, total) {
     return { courseCode, update };
 }
 
-async function verifyV3CourseWithParallelVsb(job, record) {
+function storedVerificationParts(record, expectedTotal) {
+    return (Array.isArray(record?.__vsbVerificationParts) ? record.__vsbVerificationParts : [])
+        .filter(part => Number(part?.totalReported || 0) === expectedTotal && Array.isArray(part?.visitedResultIndexes) && part.visitedResultIndexes.length);
+}
+
+function completedVerificationIndexes(parts, expectedTotal) {
+    const indexes = new Set();
+    for (const part of parts || []) {
+        for (const raw of part?.visitedResultIndexes || []) {
+            const index = Number(raw || 0);
+            if (Number.isInteger(index) && index >= 1 && index <= expectedTotal) indexes.add(index);
+        }
+    }
+    return indexes;
+}
+
+function persistVerificationParts(courseCode, expectedTotal, parts) {
+    const latest = v3Courses.get(courseCode);
+    if (!latest) return new Set();
+    const previous = storedVerificationParts(latest, expectedTotal);
+    const additions = (parts || []).filter(part => Number(part?.totalReported || 0) === expectedTotal && Array.isArray(part?.visitedResultIndexes) && part.visitedResultIndexes.length);
+    latest.__vsbVerificationParts = [...previous, ...additions];
+    const completed = completedVerificationIndexes(latest.__vsbVerificationParts, expectedTotal);
+    const fraction = expectedTotal > 0 ? completed.size / expectedTotal : 0;
+    latest.verification = verificationState({
+        ...(latest.verification || {}),
+        status: "running",
+        current: completed.size,
+        total: expectedTotal,
+        percent: Math.max(4, Math.min(96, Math.round(4 + fraction * 92))),
+        message: `Full-semester scan checkpoint saved — ${completed.size}/${expectedTotal} VSB results verified. READY workers will resume only the unfinished results.`
+    });
+    v3Courses.set(courseCode, latest);
+    return completed;
+}
+
+function desiredDeepSessions(remainingResults) {
+    const remaining = Math.max(1, Number(remainingResults || 0));
+    return remaining >= MIN_FIVE_WAY_DEEP_RESULTS ? 5
+        : remaining >= MIN_FOUR_WAY_DEEP_RESULTS ? 4
+        : remaining >= MIN_THREE_WAY_DEEP_RESULTS ? 3
+        : remaining >= MIN_PARALLEL_DEEP_RESULTS ? 2
+        : 1;
+}
+
+async function verifyV3CourseWithParallelVsb(job, record, recoveryPass = 0) {
     const shouldAbort = () => v3VerificationPauseRequested || foregroundScheduleWorkPending() || activeTimetableLoadsPending();
-    const runSingle = async reason => {
-        if (reason) console.warn(`[schedule-workers] ${job.courseCode}: ${reason} Falling back to the primary VSB full scan.`);
-        return await scheduleScraper.scrapeCourseOptions(job.term, job.courseCode, {
+    const expectedTotal = Math.max(1, Number(record.scheduleTotalReported || 0));
+    let savedParts = storedVerificationParts(record, expectedTotal);
+    let completedIndexes = completedVerificationIndexes(savedParts, expectedTotal);
+    let remainingCount = Math.max(0, expectedTotal - completedIndexes.size);
+
+    const fullPrimaryFallback = async reason => {
+        if (reason) console.warn(`[schedule-workers] ${job.courseCode}: ${reason} Re-running the final merge on primary VSB.`);
+        const result = await runScheduleWorkerJob(scheduleScraper, `${job.courseCode} final primary verification`, () => scheduleScraper.scrapeCourseOptions(job.term, job.courseCode, {
             backgroundVerification: true,
-            shouldAbort
-        });
+            shouldAbort,
+            pauseAtResultBoundary: true,
+            expectedResultTotal: expectedTotal
+        }));
+        if (result?.paused) {
+            persistVerificationParts(job.courseCode, expectedTotal, [result]);
+            const error = new Error("Background timetable verification paused for interactive work.");
+            error.code = "BACKGROUND_PAUSED";
+            throw error;
+        }
+        return result;
     };
 
-    const expectedTotal = Math.max(1, Number(record.scheduleTotalReported || 0));
-    if (expectedTotal < MIN_PARALLEL_DEEP_RESULTS) return await runSingle("");
+    const finalizeFromSavedParts = async () => {
+        const latest = v3Courses.get(job.courseCode) || record;
+        savedParts = storedVerificationParts(latest, expectedTotal);
+        const { merged, verifiedByKey, resultIndexes } = mergeParallelVerifiedOptions(latest.options || record.options, savedParts);
+        const expectedKeys = new Set((latest.options || record.options || []).map(option => option.optionKey).filter(Boolean));
+        const missingKeys = [...expectedKeys].filter(key => !verifiedByKey.has(key));
+        const allResultIndexesCovered = resultIndexes.size === expectedTotal
+            && Array.from({ length: expectedTotal }, (_, index) => index + 1).every(index => resultIndexes.has(index));
+        if (missingKeys.length || !allResultIndexesCovered) {
+            const details = [
+                missingKeys.length ? `${missingKeys.length} option key${missingKeys.length === 1 ? "" : "s"} missing` : "",
+                !allResultIndexesCovered ? "result-index coverage incomplete" : ""
+            ].filter(Boolean).join(", ");
+            const full = await fullPrimaryFallback(`Resumable parallel merge did not pass its final coverage check (${details}).`);
+            delete latest.__vsbVerificationParts;
+            v3Courses.set(job.courseCode, latest);
+            return full;
+        }
 
-    // Scale VSB deep verification only when the result set is large enough to amortize
-    // each additional isolated Chromium session. Cognos remains capped separately at 2.
-    const desiredSessions = expectedTotal >= MIN_FIVE_WAY_DEEP_RESULTS ? 5
-        : expectedTotal >= MIN_FOUR_WAY_DEEP_RESULTS ? 4
-        : expectedTotal >= MIN_THREE_WAY_DEEP_RESULTS ? 3
-        : 2;
-    let extraWorkers = [];
-    try {
-        extraWorkers = await ensureScheduleWorkerPool(desiredSessions - 1);
-    } catch (error) {
-        return await runSingle(`Could not start parallel VSB workers (${error.message}).`);
+        const scanStats = savedParts.reduce((sum, part) => ({
+            deepScans: sum.deepScans + Number(part?.scanStats?.deepScans || 0),
+            fastReads: sum.fastReads + Number(part?.scanStats?.fastReads || 0),
+            reusedDetailed: sum.reusedDetailed + Number(part?.scanStats?.reusedDetailed || 0),
+            uniqueTimetablePatterns: sum.uniqueTimetablePatterns + Number(part?.scanStats?.uniqueTimetablePatterns || 0)
+        }), { deepScans: 0, fastReads: 0, reusedDetailed: 0, uniqueTimetablePatterns: 0 });
+
+        const maxWorkersUsed = Math.max(1, Number(latest.__vsbVerificationMaxWorkers || 1));
+        delete latest.__vsbVerificationParts;
+        delete latest.__vsbVerificationMaxWorkers;
+        v3Courses.set(job.courseCode, latest);
+        console.log(`[schedule-workers] Parallel deep verification complete: ${job.courseCode} — ${expectedTotal} VSB results covered across up to ${maxWorkersUsed} session${maxWorkersUsed === 1 ? "" : "s"}; saved checkpoints prevented completed results from being rescanned after priority interruptions.`);
+        return {
+            term: job.term,
+            courseCode: job.courseCode,
+            totalReported: expectedTotal,
+            totalCaptured: merged.length,
+            truncated: false,
+            scanComplete: true,
+            preliminary: false,
+            parallelVerification: maxWorkersUsed > 1,
+            parallelVerificationWorkers: maxWorkersUsed,
+            scanStats,
+            options: merged
+        };
+    };
+
+    if (!remainingCount) return await finalizeFromSavedParts();
+
+    // Foreground/new-course VSB work owns priority. A resumed verifier never begins a
+    // new deep range while fast timetable work is pending.
+    if (shouldAbort()) {
+        const error = new Error("Background timetable verification paused for interactive work.");
+        error.code = "BACKGROUND_PAUSED";
+        throw error;
     }
 
-    const sessions = [scheduleScraper, ...extraWorkers.slice(0, desiredSessions - 1)];
-    if (sessions.length < 2) return await runSingle("No isolated VSB worker is available.");
+    let desiredSessions = recoveryPass >= 3 ? 1 : desiredDeepSessions(remainingCount);
+    let extraWorkers = [];
+    if (desiredSessions > 1) {
+        try {
+            extraWorkers = await ensureScheduleWorkerPool(desiredSessions - 1);
+        } catch (error) {
+            console.warn(`[schedule-workers] ${job.courseCode}: worker-pool growth failed (${error.message}); primary will keep making checkpointed progress.`);
+        }
+    }
 
-    const sessionCount = sessions.length;
-    const ranges = planParallelRanges(expectedTotal, sessionCount);
+    let sessions = [scheduleScraper, ...extraWorkers.slice(0, Math.max(0, desiredSessions - 1))];
+    if (recoveryPass >= 3) sessions = [scheduleScraper];
+    const ranges = planRemainingRanges(expectedTotal, completedIndexes, sessions.length);
+    if (!ranges.length) return await finalizeFromSavedParts();
+    sessions = sessions.slice(0, ranges.length);
+    const latestForWorkers = v3Courses.get(job.courseCode) || record;
+    latestForWorkers.__vsbVerificationMaxWorkers = Math.max(Number(latestForWorkers.__vsbVerificationMaxWorkers || 1), sessions.length);
+    v3Courses.set(job.courseCode, latestForWorkers);
+
+    // If a pause left completed islands inside a range that had to be merged, do not
+    // double-count those islands in progress. They may be re-read to bridge the gap,
+    // but only truly completed work outside the active ranges forms the baseline.
+    const activeRangeIndexes = new Set();
+    for (const range of ranges) for (let index = range.start; index <= range.end; index++) activeRangeIndexes.add(index);
+    const baselineCompleted = [...completedIndexes].filter(index => !activeRangeIndexes.has(index)).length;
+
     const scanDescription = ranges.map((range, index) => {
         const first = range.direction === "backward" ? range.end : range.start;
         const last = range.direction === "backward" ? range.start : range.end;
-        return `worker ${index + 1} scans ${first}→${last}`;
+        return `${scheduleWorkerName(sessions[index])} scans ${first}→${last}`;
     }).join("; ");
-    console.log(`[schedule-workers] Parallel deep verification: ${job.courseCode} — ${scanDescription}.`);
+    console.log(`[schedule-workers] Resumable deep verification: ${job.courseCode} — ${completedIndexes.size}/${expectedTotal} already complete; ${scanDescription}.`);
 
-    const progress = createParallelVerificationProgress(job.courseCode, ranges, expectedTotal);
+    const progress = createParallelVerificationProgress(job.courseCode, ranges, expectedTotal, baselineCompleted);
     activeParallelVerificationProgress = progress;
     for (let index = 1; index < sessions.length; index++) {
         const worker = sessions[index];
@@ -584,16 +770,17 @@ async function verifyV3CourseWithParallelVsb(job, record) {
     const common = {
         backgroundVerification: true,
         shouldAbort,
+        pauseAtResultBoundary: true,
         expectedResultTotal: expectedTotal
     };
     const sharedDetailCache = new Map();
-    const runRange = (worker, range) => worker.scrapeCourseOptions(job.term, job.courseCode, {
+    const runRange = (worker, range) => runScheduleWorkerJob(worker, `${job.courseCode} deep ${range.direction === "backward" ? `${range.end}→${range.start}` : `${range.start}→${range.end}`}`, () => worker.scrapeCourseOptions(job.term, job.courseCode, {
         ...common,
         resultStart: range.start,
         resultEnd: range.end,
         resultDirection: range.direction,
         sharedDetailCache
-    });
+    }));
 
     let settled;
     try {
@@ -606,152 +793,70 @@ async function verifyV3CourseWithParallelVsb(job, record) {
         }
     }
 
-    const pauseFailure = settled.find(item => item.status === "rejected" && item.reason?.code === "BACKGROUND_PAUSED");
-    if (pauseFailure) throw pauseFailure.reason;
-    const primaryAuthFailure = settled[0]?.status === "rejected" && settled[0].reason?.code === "LOGIN_REQUIRED" ? settled[0].reason : null;
-    if (primaryAuthFailure) throw primaryAuthFailure;
-
-    const goodParts = new Array(ranges.length).fill(null);
-    const healthySessions = [];
-
-    const removeBrokenWorker = async (worker, reason) => {
-        if (!worker || worker === scheduleScraper) return;
-        const workerNumber = worker.__workerNumber || "?";
-        console.warn(`[schedule-worker-${workerNumber}] ${job.courseCode} removed from the parallel pool: ${reason}`);
-        worker.__parallelBroken = true;
-        scheduleWorkerPool = scheduleWorkerPool.filter(candidate => candidate !== worker);
-        await worker.close().catch(() => {});
-        scheduleWorkerPoolDisabledUntil = Date.now() + 60 * 1000;
-    };
+    const newParts = [];
+    let paused = false;
+    let primaryFailure = null;
+    let workerFailure = false;
 
     for (let index = 0; index < settled.length; index++) {
         const item = settled[index];
         const worker = sessions[index];
         const range = ranges[index];
-        if (item.status === "fulfilled" && partCoversRange(item.value, range, expectedTotal)) {
-            goodParts[index] = item.value;
-            healthySessions.push(worker);
+        if (item.status === "fulfilled") {
+            const part = item.value;
+            if (Number(part?.totalReported || 0) === expectedTotal && Array.isArray(part?.visitedResultIndexes) && part.visitedResultIndexes.length) {
+                newParts.push(part);
+            }
+            if (part?.paused) paused = true;
+            if (!part?.paused && !partCoversRange(part, range, expectedTotal)) {
+                const reason = `returned incomplete coverage for VSB results ${range.start}–${range.end}`;
+                if (worker === scheduleScraper) primaryFailure = new Error(reason);
+                else {
+                    workerFailure = true;
+                    await retireScheduleWorker(worker, `${job.courseCode} ${reason}`);
+                }
+            }
             continue;
         }
 
-        const reason = item.status === "rejected"
-            ? (item.reason?.message || String(item.reason))
-            : `returned ${Number(item.value?.totalReported || 0) || "an unknown number of"} results or incomplete range coverage; expected ${expectedTotal}`;
+        const error = item.reason;
+        if (error?.code === "BACKGROUND_PAUSED") {
+            paused = true;
+            continue;
+        }
         if (worker === scheduleScraper) {
-            console.warn(`[schedule] ${job.courseCode} parallel range ${range.start}–${range.end} needs repair: ${reason}`);
+            if (error?.code === "LOGIN_REQUIRED") throw error;
+            primaryFailure = error;
         } else {
-            await removeBrokenWorker(worker, reason);
+            workerFailure = true;
+            await retireScheduleWorker(worker, `${job.courseCode} deep range failed: ${error?.message || error}`);
         }
     }
 
-    let repairCandidates = [...new Set(healthySessions)];
-    // A bad primary range does not prove the primary session is unusable for all work, but
-    // prefer sessions that already returned a complete, correctly-sized range first.
-    if (!repairCandidates.length && settled[0]?.status === "fulfilled") repairCandidates.push(scheduleScraper);
+    completedIndexes = persistVerificationParts(job.courseCode, expectedTotal, newParts);
+    savedParts = storedVerificationParts(v3Courses.get(job.courseCode) || record, expectedTotal);
+    remainingCount = Math.max(0, expectedTotal - completedIndexes.size);
 
-    const missingRangeIndexes = goodParts.map((part, index) => part ? -1 : index).filter(index => index >= 0);
-    for (const rangeIndex of missingRangeIndexes) {
-        if (shouldAbort()) {
-            const error = new Error("Background timetable verification paused for interactive work.");
-            error.code = "BACKGROUND_PAUSED";
-            throw error;
-        }
-        const range = ranges[rangeIndex];
-        let repaired = null;
-        let lastError = null;
-        const candidates = repairCandidates.length ? [...repairCandidates] : [scheduleScraper];
-
-        for (const worker of candidates) {
-            const workerNumber = worker === scheduleScraper ? 1 : (worker.__workerNumber || "?");
-            console.warn(`[schedule-workers] ${job.courseCode}: retrying only VSB results ${range.start}–${range.end} on worker ${workerNumber}; completed ranges are being kept.`);
-            const latest = v3Courses.get(job.courseCode);
-            if (latest) {
-                latest.verification = verificationState({
-                    ...(latest.verification || {}),
-                    status: "running",
-                    percent: Math.min(96, Math.max(6, Number(latest.verification?.percent || 6))),
-                    message: `Repairing VSB results ${range.start}–${range.end}; already-verified ranges are being kept.`
-                });
-                v3Courses.set(job.courseCode, latest);
-            }
-            try {
-                const part = await runRange(worker, range);
-                if (partCoversRange(part, range, expectedTotal)) {
-                    repaired = part;
-                    break;
-                }
-                lastError = new Error(`worker ${workerNumber} returned an inconsistent result count or incomplete coverage`);
-                if (worker !== scheduleScraper) {
-                    await removeBrokenWorker(worker, lastError.message);
-                    repairCandidates = repairCandidates.filter(candidate => candidate !== worker);
-                }
-            } catch (error) {
-                if (error?.code === "BACKGROUND_PAUSED") throw error;
-                if (worker === scheduleScraper && error?.code === "LOGIN_REQUIRED") throw error;
-                lastError = error;
-                if (worker !== scheduleScraper) {
-                    await removeBrokenWorker(worker, error?.message || String(error));
-                    repairCandidates = repairCandidates.filter(candidate => candidate !== worker);
-                }
-            }
-        }
-
-        // If every initially healthy isolated session failed the repair, make one last
-        // narrow-range attempt on the primary before throwing away all completed work.
-        if (!repaired && !candidates.includes(scheduleScraper)) {
-            try {
-                console.warn(`[schedule-workers] ${job.courseCode}: final targeted repair attempt for ${range.start}–${range.end} on primary worker 1.`);
-                const part = await runRange(scheduleScraper, range);
-                if (partCoversRange(part, range, expectedTotal)) repaired = part;
-            } catch (error) {
-                if (error?.code === "BACKGROUND_PAUSED" || error?.code === "LOGIN_REQUIRED") throw error;
-                lastError = error;
-            }
-        }
-
-        if (!repaired) {
-            return await runSingle(`Targeted repair for VSB results ${range.start}–${range.end} failed (${lastError?.message || "unknown error"}).`);
-        }
-        goodParts[rangeIndex] = repaired;
+    if (paused || shouldAbort()) {
+        console.log(`[schedule-workers] ${job.courseCode}: foreground VSB work has priority. Checkpointed ${completedIndexes.size}/${expectedTotal}; workers are READY and will resume the unfinished results afterward.`);
+        const error = new Error("Background timetable verification paused for interactive work.");
+        error.code = "BACKGROUND_PAUSED";
+        throw error;
     }
 
-    let { merged, verifiedByKey, resultIndexes } = mergeParallelVerifiedOptions(record.options, goodParts);
-    const expectedKeys = new Set((record.options || []).map(option => option.optionKey).filter(Boolean));
-    let missingKeys = [...expectedKeys].filter(key => !verifiedByKey.has(key));
-    let allResultIndexesCovered = resultIndexes.size === expectedTotal
-        && Array.from({ length: expectedTotal }, (_, index) => index + 1).every(index => resultIndexes.has(index));
+    if (!remainingCount) return await finalizeFromSavedParts();
 
-    // Never cache a partial merge. Targeted repair handles failed/inconsistent worker
-    // ranges first; this full fallback is now only for a genuinely untrustworthy final merge.
-    if (missingKeys.length || !allResultIndexesCovered) {
-        const details = [
-            missingKeys.length ? `${missingKeys.length} option key${missingKeys.length === 1 ? "" : "s"} missing` : "",
-            !allResultIndexesCovered ? "result-index coverage incomplete" : ""
-        ].filter(Boolean).join(", ");
-        return await runSingle(`Parallel verification still did not pass its merge check after targeted repair (${details}).`);
-    }
+    if (primaryFailure && recoveryPass >= 3) throw primaryFailure;
 
-    const scanStats = goodParts.reduce((sum, part) => ({
-        deepScans: sum.deepScans + Number(part?.scanStats?.deepScans || 0),
-        fastReads: sum.fastReads + Number(part?.scanStats?.fastReads || 0),
-        reusedDetailed: sum.reusedDetailed + Number(part?.scanStats?.reusedDetailed || 0),
-        uniqueTimetablePatterns: sum.uniqueTimetablePatterns + Number(part?.scanStats?.uniqueTimetablePatterns || 0)
-    }), { deepScans: 0, fastReads: 0, reusedDetailed: 0, uniqueTimetablePatterns: 0 });
-
-    console.log(`[schedule-workers] Parallel deep verification complete: ${job.courseCode} — ${expectedTotal} VSB results covered across up to ${sessionCount} sessions.`);
-    return {
-        term: job.term,
-        courseCode: job.courseCode,
-        totalReported: expectedTotal,
-        totalCaptured: merged.length,
-        truncated: false,
-        scanComplete: true,
-        preliminary: false,
-        parallelVerification: true,
-        parallelVerificationWorkers: sessionCount,
-        scanStats,
-        options: merged
-    };
+    // A timed-out/logged-out secondary is disposable. Healthy results stay checkpointed;
+    // the next recovery pass requests fresh sessions and repartitions only what remains.
+    const reason = workerFailure
+        ? "one or more VSB worker sessions failed and were closed"
+        : primaryFailure
+            ? `primary range needs a fresh retry (${primaryFailure.message || primaryFailure})`
+            : "some VSB result indexes still need verification";
+    console.warn(`[schedule-workers] ${job.courseCode}: ${reason}; ${completedIndexes.size}/${expectedTotal} results are preserved. Repartitioning only the remaining ${remainingCount}.`);
+    return await verifyV3CourseWithParallelVsb(job, v3Courses.get(job.courseCode) || record, recoveryPass + 1);
 }
 
 async function pumpV3VerificationQueue() {
@@ -771,12 +876,17 @@ async function pumpV3VerificationQueue() {
             if (record.verification?.status === "complete") continue;
 
             v3VerificationPauseRequested = false;
+            const verificationTotal = Math.max(1, Number(record.scheduleTotalReported || record.options.length || 1));
+            const checkpointed = completedVerificationIndexes(storedVerificationParts(record, verificationTotal), verificationTotal).size;
+            const checkpointFraction = checkpointed / verificationTotal;
             record.verification = verificationState({
                 status: "running",
-                current: 0,
-                total: record.scheduleTotalReported || record.options.length || 1,
-                percent: 4,
-                message: "Background full-semester timetable verification starting..."
+                current: checkpointed,
+                total: verificationTotal,
+                percent: Math.max(4, Math.min(96, Math.round(4 + checkpointFraction * 92))),
+                message: checkpointed
+                    ? `Resuming background full-semester verification from ${checkpointed}/${verificationTotal} saved VSB results...`
+                    : "Background full-semester timetable verification starting..."
             });
             v3Courses.set(job.courseCode, record);
             patchScheduleState({
@@ -785,9 +895,11 @@ async function pumpV3VerificationQueue() {
                 processingCourse: job.courseCode,
                 verificationCourse: job.courseCode,
                 verificationQueueLength: v3VerificationQueue.length,
-                current: 0,
-                total: record.scheduleTotalReported || 0,
-                message: `Verifying ${job.courseCode} across the full semester in the background...`
+                current: checkpointed,
+                total: verificationTotal,
+                message: checkpointed
+                    ? `Resuming ${job.courseCode} full-semester verification from ${checkpointed}/${verificationTotal} saved results...`
+                    : `Verifying ${job.courseCode} across the full semester in the background...`
             });
 
             try {
@@ -826,7 +938,7 @@ async function pumpV3VerificationQueue() {
                             percent: Math.min(95, Math.max(4, previous.percent || 4)),
                             message: error.code === "LOGIN_REQUIRED"
                                 ? "Full scan paused because the Schedule Builder session expired; reconnect to resume."
-                                : "Full scan paused for interactive Schedule Builder work; it will resume automatically."
+                                : `Full scan paused for higher-priority Schedule Builder work; ${previous.current}/${previous.total || record.scheduleTotalReported || 0} verified results are saved and will resume automatically.`
                         });
                         v3Courses.set(job.courseCode, latest);
                     }
@@ -1570,6 +1682,7 @@ async function prefetchV3SchedulesBatch(jobs) {
         if (!record || record.term !== job.term) return false;
         record.options = scheduleData.options || [];
         record.scheduleTotalReported = scheduleData.totalReported || record.options.length;
+        record.__vsbVerificationParts = [];
         record.cached = false;
         record.verification = verificationState(scheduleData.scanComplete === true
             ? { status: "complete", percent: 100, current: record.scheduleTotalReported, total: record.scheduleTotalReported, message: "Full semester timetable scan complete." }
@@ -1592,16 +1705,18 @@ async function prefetchV3SchedulesBatch(jobs) {
             if (index >= candidates.length) return;
             const job = candidates[index];
             try {
-                const scheduleData = await worker.scrapeCourseOptions(job.term, job.courseCode, { preliminaryOnly: true });
+                const scheduleData = await runScheduleWorkerJob(worker, `${job.courseCode} fast scan`, () => worker.scrapeCourseOptions(job.term, job.courseCode, { preliminaryOnly: true }));
                 if (storePrefetch(job, scheduleData, workerIndex)) loaded++;
             } catch (error) {
-                // A secondary VSB session can occasionally miss an exact course while the
-                // proven primary session can still find it. Preserve parallel speed, but repair
-                // only that missed fast-load on the primary before grade-history work continues.
-                console.warn(`[schedule-worker-${workerIndex + 1}] ${job.courseCode} prefetch failed; ${isPrimary ? "primary retry will remain queued" : "queueing immediate primary repair"}: ${error.message}`);
-                if (!isPrimary) retryOnPrimary.push(job);
-                if (!isPrimary && (error.code === "LOGIN_REQUIRED" || error.code === "PARALLEL_WORKER_UNAVAILABLE")) {
-                    worker.__parallelBroken = true;
+                // New-course fast loads have highest VSB priority. A secondary that times
+                // out, logs out, or returns bad state is disposable: close it and let the
+                // next capacity request create a fresh VSB session. The proven primary
+                // repairs only the missed course, not the whole batch.
+                console.warn(`[schedule-${scheduleWorkerName(worker)}] ${job.courseCode} fast scan failed; ${isPrimary ? "primary retry will remain queued" : "queueing immediate primary repair"}: ${error.message}`);
+                if (!isPrimary) {
+                    retryOnPrimary.push(job);
+                    if (!worker.__parallelBroken) await retireScheduleWorker(worker, `${job.courseCode} fast scan failed: ${error.message}`);
+                    return;
                 }
             } finally {
                 completed++;
@@ -1640,12 +1755,6 @@ async function prefetchV3SchedulesBatch(jobs) {
             }
         }
     } finally {
-        const broken = scheduleWorkerPool.filter(worker => worker.__parallelBroken);
-        if (broken.length) {
-            scheduleWorkerPool = scheduleWorkerPool.filter(worker => !worker.__parallelBroken);
-            await Promise.allSettled(broken.map(worker => worker.close()));
-            scheduleWorkerPoolDisabledUntil = Date.now() + 60 * 1000;
-        }
         patchScheduleState({
             busy: false,
             phase: scheduleState.connected ? "ready" : scheduleState.phase,
@@ -1862,7 +1971,6 @@ async function handleAPI(req, res, url) {
             patchScheduleState({ busy: true, connected: false, loginRequired: false, phase: "signing-in", message: "Signing in to Schedule Builder...", lastError: null });
             try {
                 await closeScheduleWorkerPool();
-                scheduleWorkerPoolDisabledUntil = 0;
                 const terms = await scheduleScraper.login(String(body.username || ""), String(body.password || ""));
                 if (!terms.length && scheduleScraper.authStep !== "none") {
                     patchScheduleState({
@@ -1940,7 +2048,6 @@ async function handleAPI(req, res, url) {
             patchScheduleState({ busy: true, connected: false, loginRequired: false, phase: "connecting", message: "Reconnecting to Schedule Builder...", lastError: null });
             try {
                 await closeScheduleWorkerPool();
-                scheduleWorkerPoolDisabledUntil = 0;
                 await scheduleScraper.close();
                 const terms = await scheduleScraper.connect();
                 if (!terms.length && scheduleScraper.authStep !== "none") {
@@ -1972,6 +2079,7 @@ async function handleAPI(req, res, url) {
             const changed = term !== scheduleState.term;
             patchScheduleState({ busy: true, phase: "selecting-term", message: `Opening ${term} in Schedule Builder...`, lastError: null });
             try {
+                if (changed) await closeScheduleWorkerPool();
                 await scheduleScraper.setTerm(term);
                 patchScheduleState({ busy: false, connected: true, loginRequired: false, authStep: "none", phase: "ready", term, message: `Planning ${term}. Start typing a course below.` });
             } catch (error) {

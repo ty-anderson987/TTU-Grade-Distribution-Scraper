@@ -14,6 +14,13 @@
 - Preserve successful parallel deep-scan ranges when a worker fails and retry only the missing range on a healthy/primary session before considering a full primary fallback.
 - Add regression coverage for parent-domain cookie stripping/fresh worker storage state and explicit two-job Cognos overlap.
 - Live verification confirmed distinct VSB cookie fingerprints, concurrent PHYS 2401/PHYS 1408 deep-scan lanes, targeted missing-range repair, and simultaneous two-worker Cognos history retrieval.
+- Add explicit VSB worker lifecycle states: isolated sessions return `READY` after completed/yielded jobs, are readiness-checked before reuse, and are retired/closed if TTU inactivity returns them to authentication.
+- Treat worker startup failures as disposable sessions. A timed-out/failed Chromium context is closed and the pool requests a fresh isolated VSB session with a new worker ID instead of globally disabling parallelism for a minute.
+- Make background deep verification resumable across foreground priority interruptions: finish the current result, checkpoint completed VSB result indexes, yield workers to new-course fast scans, then repartition only the unfinished indexes when the fast queue drains.
+- Avoid the observed PHYS-style restart from result 1 after a priority interruption; saved deep-scan results now survive pause/resume cycles until final full-index/option-key validation succeeds.
+- Harden the transient VSB welcome screen by invoking its Continue action through page JavaScript when Playwright actionability changes between state detection and click.
+- Require every newly bootstrapped isolated VSB worker to clear all active pre-existing/enrolled course rows before it reports `READY`; the cleanup is count-agnostic and explicitly regression-tested with both five- and seven-course enrolled schedules.
+- Fix professor availability cards not repainting after analysis completion: the completed availability result is now allowed to render before the outer `analysisRunning` flag clears, so professors with zero compatible schedules are dimmed/labeled unavailable again.
 
 ## 3.1.0 — Click-to-pin cards, aligned result layout, and fast-timetable priority
 

@@ -15,7 +15,7 @@ The application combines official TTU timetable and grade-distribution data with
 - Fast timetable loading prioritized ahead of background full-semester verification
 - Adaptive 1–5 VSB sessions for large full-semester scans
 - Fresh per-worker VSB server sessions with UUID diagnostics and cookie-fingerprint isolation checks
-- Exact course-code validation and in-place clearing of pre-existing VSB courses
+- Exact course-code validation and count-agnostic clearing of all pre-existing/enrolled VSB courses before a worker becomes READY
 - Linked lecture/lab/discussion/no-credit bundles kept together
 - Conflict-free local schedule generation and ranking
 - Professor Prefer / Neutral / Avoid controls
@@ -157,9 +157,9 @@ When courses are added, preliminary VSB timetable data is given priority so the 
 
 After preliminary timetables are available, full-semester verification runs in the background for labs, discussions, no-credit companions, exams, holidays, irregular dates, and other unusual timetable patterns.
 
-For large result sets, full-semester verification can use up to five VSB sessions. The primary authenticated session is joined by isolated Chromium workers that reuse only the TTU SSO state needed to sign in; cookies that would be sent to `schedulebuilder.ttu.edu` (including parent-domain `.ttu.edu` cookies) are removed before each worker enters VSB so TTU can bootstrap a separate Schedule Builder server session. Each VSB session receives a local UUID marker and a short hash of its applicable TTU Schedule Builder cookies for diagnostics; real authentication-cookie values are never printed. Parallel results are accepted only after coverage and result-count checks pass. If an isolated worker misses an exact course or range, the application preserves successful work and retries only the affected range through a healthy/primary session rather than silently accepting incomplete data.
+For large result sets, full-semester verification can use up to five VSB sessions. The primary authenticated session is joined by isolated Chromium workers that reuse only the TTU SSO state needed to sign in; cookies that would be sent to `schedulebuilder.ttu.edu` (including parent-domain `.ttu.edu` cookies) are removed before each worker enters VSB so TTU can bootstrap a separate Schedule Builder server session. Each VSB session receives a local UUID marker and a short hash of its applicable TTU Schedule Builder cookies for diagnostics; real authentication-cookie values are never printed. Workers now have an explicit lifecycle (`READY` → `BUSY` → `COMPLETE/YIELDED` → `READY`). A newly bootstrapped isolated worker clears every active pre-existing VSB course before it can enter `READY`; the reset loop is count-agnostic and handles enrolled rows through VSB's temporary `Plan to drop` state, so a user may begin with 5, 7, or another number of enrolled courses. Before an idle isolated worker is leased again, its VSB page is readiness-checked; an expired, timed-out, or authentication-returned worker is closed and removed, and future capacity requests create a fresh browser/session instead of reusing the stale one.
 
-Fast timetable work remains higher priority than background deep verification. If a new course is added while a large deep scan is running, verification can yield so the new course's preliminary VSB timetable becomes available first, then resume from cached/verified progress. Five VSB sessions are therefore a ceiling, not a requirement that every deep scan must occupy continuously.
+Fast timetable work remains higher priority than background deep verification. Deep scans yield only at VSB result boundaries, save every completed result index, and return their sessions to `READY` before foreground fast-load work runs. When the foreground queue drains, the verifier repartitions only the still-missing result indexes across whatever healthy workers are available. A course that was 28/60 complete therefore resumes from the remaining work instead of starting again at result 1. Worker startup failures are disposable and retried with fresh isolated sessions; five VSB sessions remain a ceiling, not a requirement that every deep scan must occupy continuously.
 
 ### Course pinning
 
@@ -190,6 +190,8 @@ Professor ranking follows this priority:
    - Used when neither usable TTU grade history nor usable RMP data exists.
 
 A professor with an RMP profile but zero student ratings is treated as **unrated**. The app displays `—` instead of `0/5`, and the professor receives no RMP ranking penalty.
+
+Professor availability badges are driven by the completed local schedule analysis. A professor with zero compatible schedules under the current course/time constraints is dimmed and labeled unavailable; completed availability now renders immediately when analysis finishes rather than being suppressed by the transient analysis-worker state flag.
 
 Explicit **Prefer** and **Avoid** selections remain user-controlled overrides.
 

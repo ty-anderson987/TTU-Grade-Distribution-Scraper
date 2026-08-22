@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 const assert = require('assert');
-const { planParallelRanges, mergeParallelVerifiedOptions, partCoversRange } = require('./parallel-utils');
+const { planParallelRanges, planRemainingRanges, mergeParallelVerifiedOptions, partCoversRange } = require('./parallel-utils');
 
 function assertCoverage(total, sessions) {
     const ranges = planParallelRanges(total, sessions);
@@ -60,5 +60,25 @@ assert.strictEqual(merged.merged.find(x => x.optionKey === 'B').value, 'new-b');
 assert.strictEqual(partCoversRange({ totalReported: 107, visitedResultIndexes: [87, 88, 89] }, { start: 87, end: 89 }, 107), true);
 assert.strictEqual(partCoversRange({ totalReported: 38, visitedResultIndexes: [38] }, { start: 87, end: 107 }, 107), false);
 assert.strictEqual(partCoversRange({ totalReported: 107, visitedResultIndexes: [87, 89] }, { start: 87, end: 89 }, 107), false);
+
+
+
+// Resuming a paused deep scan should keep already-verified result indexes and split
+// only the remaining work across the available sessions.
+assert.deepStrictEqual(
+    planRemainingRanges(60, new Set(Array.from({ length: 28 }, (_, i) => i + 1)), 4),
+    [
+        { start: 29, end: 36, direction: 'forward' },
+        { start: 37, end: 44, direction: 'forward' },
+        { start: 45, end: 52, direction: 'forward' },
+        { start: 53, end: 60, direction: 'backward' }
+    ]
+);
+
+const islandResume = planRemainingRanges(20, new Set([1, 2, 6, 7, 11, 12, 19, 20]), 3);
+assert.strictEqual(islandResume.length, 3, 'remaining-range planning must stay within the available session count');
+const coveredAfterResume = new Set([1, 2, 6, 7, 11, 12, 19, 20]);
+for (const range of islandResume) for (let i = range.start; i <= range.end; i++) coveredAfterResume.add(i);
+assert.strictEqual(coveredAfterResume.size, 20, 'resume ranges must cover every still-missing VSB result');
 
 console.log('parallel utility tests passed');

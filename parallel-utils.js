@@ -20,6 +20,77 @@ function planParallelRanges(totalResults, requestedSessions) {
     return ranges;
 }
 
+function planRemainingRanges(totalResults, completedIndexes, requestedSessions) {
+    const total = Math.max(0, Math.floor(Number(totalResults) || 0));
+    if (!total) return [];
+    const completed = new Set((completedIndexes instanceof Set ? [...completedIndexes] : (Array.isArray(completedIndexes) ? completedIndexes : []))
+        .map(value => Number(value || 0))
+        .filter(value => Number.isInteger(value) && value >= 1 && value <= total));
+    const missing = [];
+    for (let index = 1; index <= total; index++) {
+        if (!completed.has(index)) missing.push(index);
+    }
+    if (!missing.length) return [];
+
+    const sessions = Math.max(1, Math.min(missing.length, Math.floor(Number(requestedSessions) || 1)));
+    let runs = [];
+    let start = missing[0];
+    let previous = missing[0];
+    for (let i = 1; i < missing.length; i++) {
+        const current = missing[i];
+        if (current === previous + 1) {
+            previous = current;
+            continue;
+        }
+        runs.push({ start, end: previous });
+        start = previous = current;
+    }
+    runs.push({ start, end: previous });
+
+    // Repeated foreground pauses can leave several completed islands. If there are
+    // more missing runs than available VSB sessions, merge across the smallest
+    // already-completed gap. That may re-check a tiny completed island, but avoids
+    // serializing the whole remaining scan and minimizes duplicate work.
+    while (runs.length > sessions) {
+        let mergeAt = 0;
+        let smallestGap = Infinity;
+        for (let i = 0; i < runs.length - 1; i++) {
+            const gap = runs[i + 1].start - runs[i].end - 1;
+            if (gap < smallestGap) {
+                smallestGap = gap;
+                mergeAt = i;
+            }
+        }
+        const merged = { start: runs[mergeAt].start, end: runs[mergeAt + 1].end };
+        runs.splice(mergeAt, 2, merged);
+    }
+
+    // Split the largest remaining runs until idle sessions can be put to work.
+    while (runs.length < sessions) {
+        let splitAt = -1;
+        let largest = 1;
+        for (let i = 0; i < runs.length; i++) {
+            const size = runs[i].end - runs[i].start + 1;
+            if (size > largest) {
+                largest = size;
+                splitAt = i;
+            }
+        }
+        if (splitAt < 0) break;
+        const range = runs[splitAt];
+        const midpoint = Math.floor((range.start + range.end) / 2);
+        runs.splice(splitAt, 1,
+            { start: range.start, end: midpoint },
+            { start: midpoint + 1, end: range.end });
+    }
+
+    runs.sort((a, b) => a.start - b.start);
+    return runs.map((range, index) => ({
+        ...range,
+        direction: index === runs.length - 1 && runs.length > 1 ? 'backward' : 'forward'
+    }));
+}
+
 function mergeParallelVerifiedOptions(baseOptions, parts) {
     const verifiedByKey = new Map();
     const resultIndexes = new Set();
@@ -71,4 +142,4 @@ function partCoversRange(part, range, expectedTotal) {
     return true;
 }
 
-module.exports = { planParallelRanges, mergeParallelVerifiedOptions, partCoversRange };
+module.exports = { planParallelRanges, planRemainingRanges, mergeParallelVerifiedOptions, partCoversRange };

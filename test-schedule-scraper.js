@@ -331,17 +331,21 @@ async function testVariablePreexistingCourseClearing() {
         }
     }
 
-    // Reproduce the user's real VSB shape: enrolled courses have a Stay enrolled / Plan to
-    // drop dropdown and no removable trash control. All five must clear without an error.
-    const enrolled = new TTUScheduleScraper({ profileDir: '/tmp/ttu-test-clear-enrolled' });
-    const enrolledPage = makeResetMockPage([
-        'ECE 5375', 'ECE 5364', 'ECE 3312', 'ECE 3332', 'ECE 3325'
-    ].map(code => ({ code, enrolled: true })));
-    enrolled.page = enrolledPage; enrolled.touch = () => {}; enrolled.status = () => {};
-    assert.strictEqual(await enrolled.clearExistingCourses(), 5);
-    assert.strictEqual((await enrolled.activeCourseSnapshot()).count, 0);
-    assert.strictEqual(enrolledPage.rows.reduce((sum, row) => sum + row.dropSelections, 0), 5, 'enrolled rows must use Plan to drop');
-    assert.strictEqual(enrolledPage.rows.reduce((sum, row) => sum + row.clicks, 0), 0, 'enrolled rows must not require a trash control');
+    // Reproduce real VSB account shapes: enrolled courses have a Stay enrolled / Plan to
+    // drop dropdown and no removable trash control. The cleanup must never be hardcoded
+    // to a five-course schedule; test both five and seven fully-enrolled starting rows.
+    for (const enrolledCount of [5, 7]) {
+        const enrolled = new TTUScheduleScraper({ profileDir: `/tmp/ttu-test-clear-enrolled-${enrolledCount}` });
+        const enrolledPage = makeResetMockPage(Array.from({ length: enrolledCount }, (_, index) => ({
+            code: `ECE ${3300 + index}`,
+            enrolled: true
+        })));
+        enrolled.page = enrolledPage; enrolled.touch = () => {}; enrolled.status = () => {};
+        assert.strictEqual(await enrolled.clearExistingCourses(), enrolledCount);
+        assert.strictEqual((await enrolled.activeCourseSnapshot()).count, 0);
+        assert.strictEqual(enrolledPage.rows.reduce((sum, row) => sum + row.dropSelections, 0), enrolledCount, 'every enrolled row must use Plan to drop');
+        assert.strictEqual(enrolledPage.rows.reduce((sum, row) => sum + row.clicks, 0), 0, 'enrolled rows must not require a trash control');
+    }
 
     // Already-dropped/ignored rows remain in VSB's DOM but are not active and must not be clicked.
     const mixed = new TTUScheduleScraper({ profileDir: '/tmp/ttu-test-clear-mixed' });
@@ -437,6 +441,62 @@ async function testScrapePipelineValidatesExactCourse() {
     assert.ok(result.options.every(option => option.components.every(component => component.courseCode === 'ECE 3311')));
 }
 
+
+async function testBackgroundPauseReturnsCompletedRangeProgress() {
+    const scraper = new TTUScheduleScraper({ profileDir: '/tmp/ttu-test-schedule-profile-pause' });
+    let current = 1;
+    let completedOptions = 0;
+    scraper.resetForCourse = async () => { current = 1; };
+    scraper.addCourse = async () => {};
+    scraper.isolateCourse = async () => {};
+    scraper.assertOnlyCourseActive = async () => true;
+    scraper.waitForResults = async () => 4;
+    scraper.touch = () => {};
+    scraper.status = update => {
+        const text = typeof update === 'string' ? update : '';
+        if (/option 1 of 4/.test(text) && /detailed timetable check/.test(text)) completedOptions = 1;
+    };
+    scraper.captureDetailedOccurrences = async () => ({
+        occurrences: [], weeks: [], occurrenceCoverageComplete: true, scanDirection: 'forward'
+    });
+    scraper.parseCurrentResult = async courseCode => ({
+        courseCode,
+        optionKey: `key-${current}`,
+        timetableSignature: `sig-${current}`,
+        components: [{ courseCode, section: 'Lecture 001', crn: String(20000 + current), instructor: 'Test', meetings: [] }],
+        variants: [], rawMeetingLines: [], legendOccurrences: [],
+        sessionStart: '2026-08-24', sessionEnd: '2026-12-01', legendDataComplete: true,
+        noScheduledMeeting: false, needsDeepScan: true
+    });
+    scraper.page = {
+        locator(selector) {
+            if (selector === '.results-current-schedule') {
+                return { first: () => ({ textContent: async () => String(current) }) };
+            }
+            return { first: () => ({ click: async () => {} }), count: async () => 1 };
+        },
+        evaluate: async fn => {
+            const source = String(fn);
+            if (source.includes('caseNextResult')) { current++; return true; }
+            if (source.includes('casePrevResult') || source.includes('casePreviousResult')) { current--; return true; }
+            return false;
+        }
+    };
+
+    const result = await scraper.scrapeCourseOptions('Fall 2026', 'PHYS 2401', {
+        backgroundVerification: true,
+        pauseAtResultBoundary: true,
+        shouldAbort: () => completedOptions >= 1,
+        resultStart: 1,
+        resultEnd: 4,
+        expectedResultTotal: 4
+    });
+    assert.strictEqual(result.paused, true, 'background scan should yield at the next result boundary');
+    assert.strictEqual(result.rangeComplete, false);
+    assert.deepStrictEqual(result.visitedResultIndexes, [1], 'completed VSB results must be returned instead of discarded on pause');
+    assert.strictEqual(result.options.length, 1);
+}
+
 async function testStaleNoResultsDoesNotWinRace() {
     const scraper = new TTUScheduleScraper({ profileDir: '/tmp/ttu-test-schedule-profile-results' });
     let polls = 0;
@@ -470,6 +530,7 @@ async function testStaleNoResultsDoesNotWinRace() {
     await testVariablePreexistingCourseClearing();
     await testCourseIsolationGuard();
     await testScrapePipelineValidatesExactCourse();
+    await testBackgroundPauseReturnsCompletedRangeProgress();
     await testStaleNoResultsDoesNotWinRace();
     console.log('schedule scraper reliability tests passed');
 })().catch(error => {
