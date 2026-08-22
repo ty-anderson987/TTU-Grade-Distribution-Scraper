@@ -1,23 +1,34 @@
 # Dependencies
 node_modules/
 
-# Local Playwright / TTU session
-ttu-browser-profile/
-
-# Generated scraper files
-output/
+# Runtime data
+data/
 logs/
-debug/
-
-# Runtime files
+output/
 .server.pid
-*.log
 
-# Environment / credentials
+# Browser / Playwright session data
+ttu-browser-profile/
+playwright-profile/
+
+# Debug / temporary files
+debug/
+*.log
+*.tmp
+
+# Environment files
 .env
 .env.*
+
+# Archives
+*.zip
 
 # OS files
 .DS_Store
 Thumbs.db
-desktop.ini
+
+# npm debug files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
