@@ -1,0 +1,1331 @@
+<!-- Copyright 2026 Ty Anderson | SPDX-License-Identifier: Apache-2.0 -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TTU Schedule Builder Analyzer — Grade Scraper 3.1.1</title>
+<style>
+:root{
+  color-scheme:light;
+  --red:#cc0000;--red-dark:#9d0000;--ink:#171717;--muted:#68707c;--line:#d8dbe0;
+  --bg:#f3f4f6;--panel:#fff;--soft:#f8f9fb;--good:#16794f;--warn:#9b6800;--bad:#b42318;
+  --shadow:0 12px 30px rgba(0,0,0,.08)
+}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,"Segoe UI",Arial,sans-serif}
+header{background:#111;color:#fff;border-bottom:4px solid var(--red)}
+.header-wrap{max-width:1420px;margin:auto;padding:18px 24px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+.brand h1{margin:0 0 4px;font-size:25px}.brand p{margin:0;color:#d4d4d4;font-size:14px}
+.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a{color:#fff;text-decoration:none;border:1px solid #555;border-radius:8px;padding:8px 12px;font-weight:700}.nav a.active{background:var(--red);border-color:var(--red)}
+main{max-width:1420px;margin:auto;padding:20px}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;box-shadow:0 1px 0 rgba(0,0,0,.02)}
+.card-head{padding:14px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.card-head h2{margin:0;font-size:18px}.card-body{padding:16px 17px}
+.muted,.help{color:var(--muted);font-size:13px}.hidden{display:none!important}.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.service{border:1px solid var(--line);border-radius:12px;padding:13px;background:var(--soft)}.service-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.service h3{margin:0 0 5px;font-size:16px}.status{display:inline-flex;align-items:center;gap:7px;font-weight:750;font-size:13px}.dot{width:10px;height:10px;border-radius:50%;background:#8a8a8a;flex:none}.dot.good{background:var(--good)}.dot.warn{background:var(--warn)}.dot.bad{background:var(--bad)}
+button,.button,a.button{appearance:none;border:1px solid #aeb2b8;background:#fff;color:#111;border-radius:8px;padding:9px 12px;font:inherit;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:6px}button:hover:not(:disabled),a.button:hover{background:#f0f1f3}button.primary,a.button.primary{background:var(--red);border-color:var(--red);color:#fff}button.primary:hover:not(:disabled){background:var(--red-dark)}button:disabled{opacity:.42;cursor:not-allowed}.small{padding:6px 9px;font-size:12px}.danger{color:var(--bad);border-color:#d9aaa7}
+.field label{display:block;font-weight:750;margin-bottom:5px;font-size:13px}.field input,.field select,.field textarea{width:100%;border:1px solid #aeb2b8;border-radius:8px;padding:10px 11px;font:inherit;background:#fff}.field textarea{min-height:78px;resize:vertical}.login-row{display:grid;grid-template-columns:1fr 1fr auto;gap:9px;align-items:end;margin-top:12px}.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.section-title .actions{display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:7px;flex-wrap:nowrap;min-height:34px;margin-top:8px}.section-title .actions .small,.section-title .actions .button{white-space:nowrap;flex:0 0 auto}.mfa{margin-top:10px;padding:10px;border:1px dashed #c4c7cc;border-radius:9px;background:#fff}.mfa-row{display:flex;gap:8px;align-items:end;flex-wrap:wrap}.mfa-row .field{min-width:200px;flex:1}.remember{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-top:8px}
+#errorBox{position:sticky;top:8px;z-index:50;margin-bottom:12px;padding:11px 13px;border:1px solid #e0aaa7;background:#fff0ef;color:var(--bad);border-radius:9px;font-weight:650}
+.term-layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.term-panel{border:1px solid var(--line);border-radius:11px;padding:13px;background:var(--soft)}.term-panel h3{margin:0 0 4px;font-size:15px}.term-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:11px}.term-choice{min-height:54px;text-align:left;justify-content:flex-start;padding:11px 13px}.term-choice.selected{background:#1d1d1d;color:#fff;border-color:#1d1d1d}.term-choice .term-note{display:block;font-size:11px;font-weight:500;opacity:.72;margin-top:3px}
+.grade-term-wrap{position:relative;margin-top:10px}.grade-term-details{position:relative}.grade-term-details>summary{list-style:none;border:1px solid #aaa;border-radius:8px;padding:9px 10px;background:#fff;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:40px;font-weight:750}.grade-term-details>summary::-webkit-details-marker{display:none}.grade-term-details[open]>summary{border-color:var(--red);box-shadow:0 0 0 2px rgba(204,0,0,.12)}.grade-term-summary-arrow{color:var(--muted)}.grade-term-panel{position:absolute;z-index:60;top:calc(100% + 5px);left:0;min-width:100%;width:min(440px,90vw);max-height:370px;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 14px 35px rgba(0,0,0,.16)}.grade-term-actions{display:flex;gap:6px;flex-wrap:wrap;padding:3px 3px 7px;position:sticky;top:-8px;background:#fff;z-index:2}.grade-term-actions button{padding:5px 8px;font-size:12px}.grade-term-actions .apply{margin-left:auto}.grade-term-list{display:grid;gap:2px;min-width:240px}.grade-term-option{display:flex;align-items:flex-start;gap:10px;padding:7px 6px;border-radius:6px;font-size:13px;cursor:pointer}.grade-term-option:hover{background:#f4f4f5}.grade-term-option input[type=checkbox]{width:17px;height:17px;min-width:17px;flex:0 0 17px;margin:1px 0 0;accent-color:var(--red)}.grade-term-count{font-weight:800;color:var(--red)}.grade-term-dirty{font-size:11px;color:var(--warn);font-weight:700;margin-left:6px}.control-locked{opacity:.55;filter:saturate(.65);pointer-events:none;user-select:none}.locked-note{margin-top:8px;color:var(--muted);font-size:12px}.locked-note strong{color:var(--warn)}
+.course-entry{max-width:780px}.autocomplete-wrap{position:relative}.suggestion-menu{position:absolute;left:0;right:0;top:calc(100% + 5px);z-index:40;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);max-height:320px;overflow:auto}.suggestion-item{width:100%;border:0;border-bottom:1px solid #eceef0;border-radius:0;padding:11px 12px;display:block;text-align:left;font-weight:600}.suggestion-item:last-child{border-bottom:0}.suggestion-item.active,.suggestion-item:hover{background:#f4f5f7}.suggestion-code{font-weight:850;font-size:15px}.search-state{min-height:18px;margin-top:6px}.course-list{display:grid;gap:10px;margin-top:14px}.course-row{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff;display:grid;grid-template-columns:minmax(150px,.7fr) minmax(280px,1.55fr) minmax(330px,1.2fr) auto;align-items:center;gap:12px;transition:opacity .2s ease,background .2s ease}.course-row.loading{background:#eceff2;opacity:.68}.course-code{font-weight:850;font-size:17px;display:flex;align-items:center;gap:8px}.course-color-dot{width:11px;height:11px;border-radius:3px;background:var(--course-color,#ddd);border:1px solid rgba(0,0,0,.28);flex:0 0 auto}.course-status{font-size:13px;min-width:0}.course-meta{font-size:12px;color:var(--muted);margin-top:4px}.course-settings{display:grid;grid-template-columns:1fr 1fr;gap:8px;position:relative;min-height:52px}.course-settings label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;font-weight:700}.course-settings select{width:100%;border:1px solid #b7bbc1;border-radius:7px;padding:7px 8px;background:#fff;font-size:12px}.course-settings select:disabled{background:#e3e5e8;color:#777;cursor:not-allowed}.course-retry-panel{grid-column:1/-1;border:1px solid #e3b2ae;border-radius:9px;background:#fff8f7;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;padding:9px 10px;min-height:52px}.course-retry-copy{min-width:0}.course-retry-copy strong{display:block;font-size:12px;color:#81241d}.course-retry-copy span{display:block;margin-top:2px;font-size:10.5px;line-height:1.3;color:var(--muted)}.course-retry-panel button{white-space:nowrap}.course-warning{color:var(--bad);font-size:11px;margin-top:4px;font-weight:650}.spinner{display:inline-block;width:13px;height:13px;border:2px solid #ccc;border-top-color:var(--red);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+.course-progress{height:9px;background:#e4e6e9;border-radius:999px;overflow:hidden;margin-top:8px;border:1px solid #d8dadd}.course-progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--red-dark),var(--red));transition:width .3s ease}.course-progress-label{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted);margin-top:4px}.course-progress.done span{background:var(--good)}
+.semester-scan{margin-top:8px;padding-top:7px;border-top:1px dashed #d9dce1}.semester-scan-head{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:800}.semester-scan-head .pending{color:var(--bad)}.semester-scan-head .complete{color:var(--good)}.semester-scan-bar{height:7px;background:#eceef1;border-radius:999px;overflow:hidden;margin-top:5px;border:1px solid #dadde1}.semester-scan-bar span{display:block;height:100%;background:linear-gradient(90deg,#8f1711,var(--bad));transition:width .35s ease}.semester-scan-bar.complete span{background:var(--good)}.semester-scan-note{font-size:10.5px;color:var(--muted);margin-top:4px;line-height:1.25}.scan-overview{margin-top:12px;border:1px solid #d8dbe0;border-radius:10px;padding:10px 12px;background:#fafbfc}.scan-overview-top{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:12px}.scan-overview-top strong{font-size:13px}.scan-overview .semester-scan-bar{margin-top:7px;height:8px}.scan-overview.ready{border-color:#a8d7c2;background:#f4fbf7}.scan-overview.pending{border-color:#e4aaa5;background:#fff8f7}
+.preference-layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.hard-filter-preview{grid-column:1/-1;border:1px solid #d9dce1;border-radius:10px;padding:10px 12px;background:#fafbfc;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.hard-filter-preview strong{font-size:13px}.hard-filter-preview.good{border-color:#9fd0b7;background:#f4fbf7}.hard-filter-preview.bad{border-color:#dfa5a0;background:#fff0ef;color:#8c211b}.hard-filter-preview.pending{border-color:#e3c987;background:#fff9e8}.hard-filter-preview .preview-count{font-size:18px;font-weight:900;white-space:nowrap}.pref-block{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--soft)}.pref-block h3{font-size:14px;margin:0 0 9px}.choice-grid{display:flex;gap:7px;flex-wrap:wrap}.choice{padding:7px 9px;font-size:12px}.choice.selected{background:#1d1d1d;color:#fff;border-color:#1d1d1d}.choice.zero{text-decoration:line-through}.toggle-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:13px}.toggle-row label{display:flex;align-items:flex-start;gap:10px}.toggle-row input[type=checkbox]{width:17px;height:17px;min-width:17px;flex:0 0 17px;margin:1px 0 0;accent-color:var(--red)}.slider-row{display:grid;grid-template-columns:145px 1fr 145px;gap:10px;align-items:center}.slider-row input{width:100%}.slider-row .right{text-align:right}.balance-readout{text-align:center;margin-top:7px;font-size:12px;font-weight:750;color:#4f5661}.update-dirty{background:#fff5e6!important;border-color:#d79a2b!important;color:#6f4a00!important}.update-ready{background:var(--red)!important;border-color:var(--red)!important;color:#fff!important}.update-ready:hover:not(:disabled){background:var(--red-dark)!important}
+.analysis-progress{margin:0 0 12px;border:1px solid #e1b0ac;border-radius:10px;background:#fff8f7;padding:9px 11px;transition:border-color .2s,background .2s}.analysis-progress.complete{border-color:#9fd0b7;background:#f4fbf7}.analysis-progress-head{display:flex;justify-content:space-between;gap:10px;align-items:center;font-size:11px;font-weight:800}.analysis-progress-head span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.analysis-progress-track{height:8px;background:#eceef1;border:1px solid #d9dce0;border-radius:999px;overflow:hidden;margin-top:6px}.analysis-progress-track span{display:block;height:100%;width:0;background:linear-gradient(90deg,#8f1711,var(--bad));transition:width .14s ease}.analysis-progress.complete .analysis-progress-track span{background:var(--good)}.analysis-progress-meta{display:flex;justify-content:space-between;gap:8px;margin-top:4px;color:var(--muted);font-size:10.5px}.calendar-course-filter.recalculating{outline:2px solid rgba(204,0,0,.12);outline-offset:2px}.calendar-course-chip.pending{box-shadow:0 0 0 2px rgba(204,0,0,.12)}
+.results-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:12px}.metric{border:1px solid var(--line);border-radius:9px;padding:10px;background:var(--soft)}.metric span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em}.metric strong{display:block;font-size:22px;margin-top:3px}.conflict{padding:11px 12px;border:1px solid #ebc474;background:#fff8e7;border-radius:9px;color:#725100;margin:0 0 15px}.info-note{padding:10px 11px;border:1px solid #cad6e2;background:#f4f8fc;border-radius:9px;color:#3e5368;margin:0 0 15px}.good-note{padding:10px 11px;border:1px solid #a6d7c0;background:#effaf5;border-radius:9px;color:#12603f;margin:0 0 15px}
+.prof-pref-list{display:grid;gap:11px}.prof-course{border:1px solid var(--line);border-radius:11px;background:var(--soft);padding:12px}.prof-course-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:9px}.prof-course-head h3{margin:0;font-size:15px}.prof-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:10px;align-items:stretch}.prof-row{border:1px solid #d7dade;border-radius:10px;background:#fff;padding:11px;display:flex;flex-direction:column;gap:9px;align-items:stretch;min-width:0}.prof-row.prefer{border-color:#7eb99d;background:#f0faf5}.prof-row.avoid{border-color:#dfa5a0;background:#fff4f3}.prof-main{min-width:0}.prof-name{font-weight:850;font-size:14px;line-height:1.25}.prof-data-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.055em;color:#7a818c;font-weight:850;margin-top:8px}.prof-stats{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.42}.prof-rmp{font-size:10px;color:#6b4d00;margin-top:4px;font-weight:750}.prof-rmp .tag{display:inline-block;margin:3px 3px 0 0;padding:2px 5px;border-radius:999px;background:#fff3cc;color:#6b4d00;border:1px solid #ead58d;font-size:9px}.prof-rmp-card{margin-top:7px;border:1px solid #ead9a7;border-radius:8px;background:#fffaf0;padding:8px}.prof-rmp-card.loading{color:var(--muted);font-size:11px}.prof-rmp-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}.prof-rmp-head strong{font-size:10.5px;color:#5f4700}.prof-rmp-source{font-size:9px;color:#8a7330;font-weight:700}.prof-rmp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.prof-rmp-stat{min-width:0;background:rgba(255,255,255,.72);border:1px solid #eee0b8;border-radius:6px;padding:5px 6px}.prof-rmp-stat span{display:block;font-size:8.5px;line-height:1.15;text-transform:uppercase;letter-spacing:.025em;color:#88722f;font-weight:800}.prof-rmp-stat strong{display:block;margin-top:2px;font-size:12px;line-height:1.2;color:#4e3c00;white-space:nowrap}.prof-rmp-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}.prof-rmp-tags .tag{display:inline-flex;padding:2px 5px;border-radius:999px;background:#fff3cc;color:#6b4d00;border:1px solid #ead58d;font-size:9px;font-weight:750}.prof-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-start;margin-top:auto;padding-top:8px;border-top:1px solid #eceef0}.prof-actions button,.prof-actions a.button{padding:6px 8px;font-size:11px;min-height:31px}.selected-prefer{background:#e3f4ea!important;border-color:#72ad8f!important;color:#115c3b!important;box-shadow:inset 0 0 0 1px rgba(17,92,59,.06)}.selected-neutral{background:#eceef1!important;border-color:#aeb2b8!important;color:#333!important}.selected-avoid{background:#ffebe9!important;border-color:#d99791!important;color:#92231a!important;box-shadow:inset 0 0 0 1px rgba(146,35,26,.05)}.prof-row.unavailable{background:#eef0f2;border-color:#c8ccd1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.025)}.prof-row.unavailable>div:first-child{opacity:.46;filter:saturate(.35)}.prof-row.unavailable .prof-actions{opacity:.72}.prof-availability{display:inline-flex;align-items:center;gap:4px;margin-top:5px;padding:3px 6px;border-radius:999px;background:#e1e4e8;color:#555;font-size:10px;font-weight:800;letter-spacing:.01em}.prof-availability.available{background:#edf7f2;color:#286046}.prof-row.prefer.unavailable,.prof-row.avoid.unavailable{background:#eef0f2;border-color:#c8ccd1}.icon-button{width:30px;height:30px;padding:0;font-size:16px}.prof-help{margin-top:9px}
+.calendar-course-filter{margin:13px 0 10px;padding:10px 11px;border:1px solid var(--line);border-radius:10px;background:#f8f9fb}.calendar-course-filter-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px}.calendar-course-filter-head strong{font-size:13px}.calendar-course-filter-actions{display:flex;gap:6px}.calendar-course-filter-actions button{padding:5px 8px;font-size:11px}.calendar-course-chips{display:flex;gap:7px;flex-wrap:wrap}.calendar-course-chip{display:inline-flex;align-items:flex-start;gap:10px;border:1px solid #cfd3d8;border-radius:8px;background:#fff;padding:6px 8px;font-size:12px;font-weight:750;cursor:pointer;user-select:none}.calendar-course-chip:hover{background:#f4f5f7}.calendar-course-chip.off{opacity:.48}.calendar-course-chip input[type=checkbox]{width:17px;height:17px;min-width:17px;flex:0 0 17px;margin:0;accent-color:var(--red)}.calendar-course-swatch{width:12px;height:12px;border-radius:3px;background:var(--course-color,#ddd);border:1px solid rgba(0,0,0,.3);flex:0 0 auto}.schedule-subset-note{margin:0 0 10px;padding:8px 10px;border-radius:8px;border:1px solid #cad6e2;background:#f4f8fc;color:#3e5368;font-size:12px;font-weight:650}.schedule-subset-note.ready{border-color:#9bcdb5;background:#f1faf5;color:#1d6447}.schedule-subset-note.warn{border-color:#e6bd6b;background:#fff8e7;color:#795400}.schedule-subset-note.bad{border-color:#dfa5a0;background:#fff0ef;color:#8c211b}.schedule-nav{position:sticky;top:8px;z-index:30;display:grid;grid-template-columns:auto minmax(220px,1fr) minmax(230px,360px) auto;align-items:center;gap:10px;margin:10px 0 14px;padding:9px;background:rgba(255,255,255,.97);border:1px solid var(--line);border-radius:11px;box-shadow:0 5px 18px rgba(0,0,0,.08);backdrop-filter:blur(6px)}.schedule-nav .center{text-align:center;min-width:0}.schedule-nav .center strong{display:block;font-size:17px}.schedule-jump label{display:block;font-size:10px;text-transform:uppercase;color:var(--muted);font-weight:800;margin-bottom:3px}.schedule-jump select{width:100%;border:1px solid #b7bbc1;border-radius:7px;padding:7px;background:#fff;font:inherit;font-size:12px}.calendar-shell{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;margin-bottom:16px}.calendar-head{display:grid;grid-template-columns:72px repeat(5,1fr);background:#f3f4f6;border-bottom:1px solid var(--line)}.calendar-head div{padding:8px 7px;text-align:center;font-weight:800;font-size:12px;border-left:1px solid #e5e7eb;min-height:45px}.calendar-head div:first-child{border-left:none}.calendar-head small{display:block;font-weight:600;color:var(--muted);margin-top:2px}.calendar-body{display:grid;grid-template-columns:72px repeat(5,1fr);height:900px;position:relative}.time-axis{position:relative;border-right:1px solid var(--line);background:#fafafa}.time-label{position:absolute;right:9px;transform:translateY(-50%);font-size:11px;color:var(--muted);white-space:nowrap}.time-label.first{transform:none}.time-label.last{transform:translateY(-100%)}.day-col{position:relative;border-right:1px solid #e5e7eb;background-image:linear-gradient(to bottom,#e6e8eb 1px,transparent 1px);background-size:100% 30px}.day-col:last-child{border-right:none}.event{position:absolute;left:4px;right:4px;border-radius:7px;padding:5px 6px;font-size:11px;overflow:hidden;border:1px solid rgba(0,0,0,.20);background:var(--course-color,#e4e6ea);box-shadow:0 1px 2px rgba(0,0,0,.08);cursor:pointer;transition:transform .08s ease,box-shadow .08s ease,outline-color .08s ease}.event:hover{transform:translateY(-1px);box-shadow:0 3px 7px rgba(0,0,0,.13)}.event.pinned{outline:3px solid #171717;outline-offset:-3px}.event.special{box-shadow:inset 0 0 0 2px #d79a2b,0 1px 2px rgba(0,0,0,.08)}.event strong{display:block;font-size:11px}.event small{display:block;margin-top:2px}.event .pin-mark{position:absolute;top:3px;right:4px;font-size:11px;font-weight:900}.week-nav{border-top:1px solid var(--line);background:#fafafa;padding:10px 12px;display:grid;grid-template-columns:auto minmax(170px,1fr) auto;gap:12px;align-items:center}.week-center{text-align:center}.week-center strong{display:block;font-size:13px}.week-center input{width:min(460px,90%);margin-top:7px}.section-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:16px;align-items:stretch}.section-card{border:1px solid var(--line);border-left:5px solid var(--course-color,#cfd3d8);border-radius:10px;padding:12px;background:#fff;display:flex;flex-direction:column;min-width:0;cursor:pointer;transition:box-shadow .12s ease,transform .12s ease,outline-color .12s ease,background .12s ease}.section-card:hover{box-shadow:0 4px 14px rgba(0,0,0,.08);transform:translateY(-1px)}.section-card.pinned{outline:3px solid #171717;outline-offset:-3px;background:#fcfcfd}.section-title{display:block;min-height:101px;border-bottom:1px solid transparent}.section-card h3{margin:0;font-size:15px;line-height:1.28;min-height:58px;max-height:58px;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;overflow:hidden;overflow-wrap:anywhere}.section-line{font-size:12px;color:var(--muted);margin:4px 0}.grade-line{margin-top:9px;padding-top:8px;border-top:1px solid #eceef0;display:flex;gap:8px;flex-wrap:wrap}.pill{border-radius:999px;background:#f0f1f3;padding:4px 7px;font-size:11px;font-weight:750}.pill.good{background:#e8f5ee;color:#12603f}.pill.bad{background:#fff0ef;color:#9d1d16}.pill.warn{background:#fff7e1;color:#7d5800}.registration-bar{margin-top:16px;border:1px solid var(--line);border-radius:11px;background:#f8f9fb;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center}.crn-string{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-weight:750;word-break:break-word}.credit-total{font-size:18px;font-weight:850;white-space:nowrap}
+.bundle-components{display:grid;gap:6px;margin:8px 0;padding:7px 8px;background:#f7f8fa;border:1px solid #e3e6ea;border-radius:7px;min-width:0;overflow:hidden}.bundle-component{display:grid;grid-template-columns:minmax(68px,.55fr) minmax(82px,.65fr) minmax(0,1.35fr);grid-template-areas:"section crn instructor" "time time time";column-gap:7px;row-gap:3px;font-size:11px;align-items:start;min-width:0;padding:3px 0}.bundle-component+.bundle-component{border-top:1px solid #e5e7eb;padding-top:6px}.bundle-component strong{grid-area:section;font-size:11px;min-width:0;overflow-wrap:anywhere}.bundle-component .bundle-crn{grid-area:crn;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;white-space:nowrap}.bundle-component .bundle-instructor{grid-area:instructor;min-width:0;overflow-wrap:anywhere}.bundle-component .bundle-time{grid-area:time;color:var(--muted);min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.3}.same-time-note{margin-top:6px;padding:6px 7px;border-radius:6px;background:#eef6ff;color:#315d86;font-size:11px;font-weight:650}
+.prof-modal-body{padding:12px;overflow:auto;min-height:0}.prof-modal-card{width:min(900px,94vw)!important;max-height:78vh;display:flex;flex-direction:column;overflow:hidden!important}.prof-modal-toolbar{display:grid;grid-template-columns:minmax(260px,1fr) auto;align-items:end;gap:10px;margin-bottom:9px}.prof-modal-toolbar .field{min-width:0}.prof-modal-toolbar select{width:100%;padding:8px}.prof-modal-counts{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}.prof-scope-note{margin:0 0 9px;padding:7px 9px;border-radius:7px;background:#f6f7f9;border:1px solid #e3e5e8;font-size:11px;color:var(--muted)}.prof-table-wrap{border:1px solid var(--line);border-radius:9px;overflow:auto;max-height:52vh;background:#fff}.prof-table{width:100%;border-collapse:collapse;font-size:11px}.prof-table th{position:sticky;top:0;z-index:1;background:#f3f4f6;text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}.prof-table td{padding:7px 8px;border-bottom:1px solid #e6e8eb;vertical-align:middle}.prof-table tr:last-child td{border-bottom:0}.prof-table tr.focused{background:#fff9e8}.prof-table tr.preference-prefer{background:#f0faf5}.prof-table tr.preference-avoid{background:#fff4f3}.prof-table tr.focused.preference-prefer{background:#e9f7ef}.prof-table tr.focused.preference-avoid{background:#ffefed}.prof-table tr.historical-only{background:#fafafa;color:#5f6670}.prof-table tr.preference-prefer td:first-child{box-shadow:inset 4px 0 0 #72ad8f}.prof-table tr.preference-avoid td:first-child{box-shadow:inset 4px 0 0 #d99791}.prof-table .professor-cell{min-width:210px;max-width:320px}.prof-table .professor-cell strong{display:block;font-size:12px;color:#171717}.prof-table .professor-cell small{display:block;color:var(--muted);margin-top:2px}.prof-table .metric-cell{text-align:center;white-space:nowrap}.prof-table .pref-cell{min-width:205px}.prof-table .pref-actions{display:flex;gap:4px;justify-content:flex-end}.prof-table .pref-actions button{padding:5px 7px;font-size:10px}.prof-table .disabled-note{font-size:10px;color:var(--muted)}.prof-badge{display:inline-flex;align-items:center;border:1px solid #cdd1d6;border-radius:999px;padding:2px 6px;font-size:9px;font-weight:800;white-space:nowrap;margin-top:3px}.prof-badge.current{background:#eef8f3;border-color:#9ec9b3;color:#176342}.prof-badge.history{background:#f1f2f4;color:#5d626b}.prof-term-mini{font-size:10px;color:var(--muted);margin-top:2px}.term-history{margin-top:5px;font-size:11px;color:var(--muted)}
+.prof-detail-top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin-bottom:10px}.prof-detail-name{font-size:21px;font-weight:850}.prof-detail-sub{font-size:12px;color:var(--muted);margin-top:3px}.prof-detail-actions{display:flex;gap:6px;flex-wrap:wrap}.prof-detail-filter{display:grid;grid-template-columns:minmax(220px,340px) 1fr;gap:10px;align-items:end;border:1px solid var(--line);border-radius:9px;background:#f8f9fb;padding:9px;margin-bottom:10px}.prof-detail-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:7px;margin-bottom:10px}.prof-detail-metric{border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff}.prof-detail-metric span{display:block;color:var(--muted);font-size:9px;text-transform:uppercase;font-weight:800;letter-spacing:.04em}.prof-detail-metric strong{display:block;font-size:17px;margin-top:3px}.prof-detail-charts{display:grid;grid-template-columns:1.45fr .8fr;gap:10px}.prof-chart{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fff}.prof-chart h3{font-size:13px;margin:0 0 6px}.prof-curve{display:block;width:100%;height:auto}.prof-donut-layout{display:grid;grid-template-columns:120px 1fr;gap:10px;align-items:center}.prof-donut{width:112px;height:112px;border-radius:50%;position:relative;background:#eee;margin:auto}.prof-donut:after{content:"";position:absolute;inset:23px;background:#fff;border-radius:50%;border:1px solid #eee}.prof-donut-center{position:absolute;inset:0;display:grid;place-items:center;z-index:2;text-align:center;font-size:10px}.prof-donut-center strong{display:block;font-size:17px}.prof-grade-legend{display:grid;gap:4px}.prof-grade-legend-row{display:grid;grid-template-columns:10px 18px 1fr auto;gap:5px;align-items:center;font-size:10px}.prof-grade-swatch{width:10px;height:10px;border-radius:2px}.prof-history-list{margin-top:10px;border:1px solid var(--line);border-radius:8px;overflow:hidden}.prof-history-row{display:grid;grid-template-columns:1fr repeat(5,70px);gap:5px;padding:6px 8px;border-bottom:1px solid #eceef0;font-size:10px;align-items:center}.prof-history-row:last-child{border-bottom:0}.prof-history-row.head{background:#f3f4f6;font-weight:800}.prof-detail-note{font-size:10px;color:var(--muted);margin-top:7px}.week-timeline{margin-top:6px}.week-months{position:relative;height:18px;margin:0 4px;font-size:9px;color:var(--muted);font-weight:750}.week-month-label{position:absolute;transform:translateX(-50%);white-space:nowrap}.week-center input[type=range]{accent-color:var(--red)}.week-periods{display:grid;gap:2px;margin:1px 4px 0}.week-period-row{height:12px;position:relative;background:#eceff2;border-radius:3px;overflow:hidden}.week-period-bar{position:absolute;top:1px;bottom:1px;border:1px solid rgba(0,0,0,.18);border-radius:2px;background:var(--course-color,#ddd);font-size:8px;font-weight:800;line-height:8px;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:left;color:#111}.week-source{font-size:9px;color:var(--muted);font-weight:650;margin-top:2px}.fallback-note{color:#59616c;font-weight:650}.special-note{color:#8a5c00;font-weight:700}
+.remember{gap:10px!important;align-items:flex-start!important}.remember input[type=checkbox]{width:17px;height:17px;min-width:17px;flex:0 0 17px;margin:1px 0 0!important;accent-color:var(--red)}
+@media(max-width:700px){.calendar-course-filter-head{align-items:flex-start}.calendar-course-chip{flex:1 1 130px}.calendar-course-filter-actions{width:100%}}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:grid;place-items:center;padding:20px;z-index:100}.modal-card{background:#fff;width:min(1100px,96vw);max-height:92vh;overflow:auto;border-radius:12px}.modal-head{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line);padding:10px 12px;display:flex;justify-content:space-between;align-items:center;z-index:2}.prof-modal-card>.modal-head{position:relative;flex:none}.change-confirm-modal{z-index:140}.change-confirm-card{width:min(520px,calc(100vw - 28px));padding:18px;overflow:visible}.change-confirm-card h3{margin:0 0 8px;font-size:18px}.change-confirm-card p{margin:0;color:var(--muted);line-height:1.5}.change-confirm-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px;flex-wrap:wrap}.change-confirm-actions .primary{background:var(--red);border-color:var(--red);color:#fff}.pin-change-notice{margin-top:10px}.preview{display:block;width:100%;height:auto;background:#eee}.footer{color:var(--muted);font-size:12px;padding:0 2px 25px}
+.top-progress{height:4px;background:#2d2d2d;overflow:hidden}.top-progress>div{height:100%;width:0;background:var(--red);transition:width .2s}.top-progress>div.busy{width:38%;animation:move 1.1s ease-in-out infinite}@keyframes move{from{transform:translateX(-110%)}to{transform:translateX(280%)}}
+@media(max-width:1050px){.course-row{grid-template-columns:1fr 1.4fr auto}.course-settings{grid-column:1/-1;grid-row:2}.term-layout{grid-template-columns:1fr}}
+@media(max-width:900px){.grid2,.grid3,.preference-layout{grid-template-columns:1fr}.bundle-component{grid-template-columns:minmax(64px,.55fr) minmax(78px,.65fr) minmax(0,1.35fr)}.prof-detail-metrics{grid-template-columns:repeat(3,1fr)}.prof-detail-charts{grid-template-columns:1fr}.prof-detail-filter{grid-template-columns:1fr}.login-row{grid-template-columns:1fr}.course-row{grid-template-columns:1fr auto}.course-status,.course-settings{grid-column:1/-1}.results-summary{grid-template-columns:1fr 1fr}.header-wrap{padding:15px}.slider-row{grid-template-columns:120px 1fr 45px}.schedule-nav{grid-template-columns:auto 1fr auto}.schedule-jump{grid-column:1/-1;grid-row:2}.registration-bar{grid-template-columns:1fr auto}.credit-total{grid-column:1/-1}.prof-row{grid-template-columns:1fr}}
+@media(max-width:620px){main{padding:12px}.results-summary{grid-template-columns:1fr 1fr}.calendar-shell{overflow-x:auto}.calendar-head,.calendar-body{min-width:680px}.term-grid{grid-template-columns:1fr}.course-settings{grid-template-columns:1fr}}
+
+/* V3.0.12 responsive polish */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,.button,a.button,input,select,textarea,summary{touch-action:manipulation}
+button,.button,a.button{min-height:40px}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid rgba(204,0,0,.24);outline-offset:2px}
+.help,.muted{line-height:1.38}
+.prof-name,.prof-stats,.prof-rmp,.section-line,.course-meta,.prof-detail-sub,.prof-scope-note{overflow-wrap:anywhere}
+.prof-rmp{font-size:11px;line-height:1.35}
+.prof-rmp .tag{font-size:10px;line-height:1.2;padding:3px 6px;margin-top:4px}
+.prof-availability{font-size:10.5px}
+.prof-detail-metric span{font-size:10px;line-height:1.2}
+.prof-detail-metric strong{font-size:18px}
+.prof-detail-note{font-size:11px;line-height:1.4}
+.prof-grade-legend-row{font-size:11px}
+.prof-history-list{overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;overscroll-behavior-inline:contain}
+.prof-history-row{min-width:520px;font-size:11px}
+.prof-table-wrap,.prof-modal-body{scrollbar-width:thin;overscroll-behavior:contain}
+.calendar-shell{scrollbar-width:thin;overscroll-behavior-x:contain;overscroll-behavior-y:auto;-webkit-overflow-scrolling:touch}
+.event{line-height:1.2}
+.modal-card{overscroll-behavior:contain}
+@media(max-width:620px){
+  .section-title{min-height:0}.section-card h3{display:block;min-height:0;max-height:none;overflow:visible}.section-title .actions{flex-wrap:wrap;min-height:0}
+  .header-wrap{padding:14px 12px;gap:12px}.brand h1{font-size:22px;line-height:1.1}.brand p{font-size:13px}
+  .nav{width:100%}.nav a{flex:1 1 135px;min-height:40px;text-align:center}
+  .card-head{padding:13px 14px}.card-body{padding:14px}
+  .card-head h2{font-size:17px;line-height:1.25}
+  .service-top{flex-wrap:wrap}.status{font-size:12px}
+  .prof-grid{grid-template-columns:1fr}.prof-row{padding:10px}.prof-actions{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));width:100%}.prof-actions>*{width:100%;min-width:0}.prof-actions>*:nth-child(1),.prof-actions>*:nth-child(2){grid-column:span 3}.prof-actions>*:nth-child(3),.prof-actions>*:nth-child(4),.prof-actions>*:nth-child(5){grid-column:span 2}.prof-rmp-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .prof-modal-card{width:calc(100vw - 16px)!important;max-height:94vh}.modal{padding:8px}.modal-card{width:calc(100vw - 16px);max-height:94vh}
+  .prof-modal-toolbar{grid-template-columns:1fr}.prof-modal-counts{justify-content:flex-start}
+  .prof-detail-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.prof-detail-name{font-size:20px}
+  .prof-donut-layout{grid-template-columns:1fr;justify-items:center}.prof-grade-legend{width:100%}
+  .schedule-nav{top:4px;gap:6px;padding:7px}.schedule-nav button{padding-left:9px;padding-right:9px}
+  .week-nav{gap:6px;padding:9px 8px}.week-nav button{padding-left:8px;padding-right:8px}
+  .registration-bar{grid-template-columns:1fr}.registration-bar .actions{justify-content:flex-start}.credit-total{grid-column:auto}
+  .calendar-course-filter-actions{display:grid;grid-template-columns:1fr 1fr}
+}
+@media(max-width:360px){
+  main{padding:10px}.header-wrap{padding-left:10px;padding-right:10px}
+  .results-summary{grid-template-columns:1fr 1fr;gap:7px}.result-stat{padding:8px}
+  .slider-row{grid-template-columns:100px 1fr 40px}
+  .prof-detail-metrics{gap:6px}.prof-detail-metric{padding:7px}
+}
+@media(pointer:coarse){button,.button,a.button{min-height:42px}.small{min-height:36px}}
+
+</style>
+</head>
+<body>
+<header><div class="header-wrap"><div class="brand"><h1>TTU Grade Scraper 3.1.1</h1><p>Schedule Builder Analyzer</p></div><div class="nav"><a href="/">Grade Analytics</a><a class="active" href="/schedule-analyzer.html">Schedule Analyzer</a></div></div><div class="top-progress"><div id="topProgress"></div></div></header>
+<main>
+  <div id="errorBox" class="hidden"></div>
+
+  <section class="card">
+    <div class="card-head"><div><h2>1. Connect Texas Tech services</h2><div class="muted">Independent Cognos and Schedule Builder sessions stay open in the background. Passwords are never saved.</div></div></div>
+    <div class="card-body grid2">
+      <div id="gradeService" class="service">
+        <div class="service-top"><div><h3>Grade Distribution / Cognos</h3><div id="gradeMessage" class="help">Checking session…</div></div><div class="status"><span id="gradeDot" class="dot warn"></span><span id="gradeStatus">Connecting</span></div></div>
+        <div id="gradeLogin" class="login-row hidden"><div class="field"><label>TTU username/email</label><input id="gradeUser" autocomplete="username" placeholder="name@ttu.edu"></div><div class="field"><label>Password</label><input id="gradePass" type="password" autocomplete="current-password" placeholder="Password"></div><button id="gradeLoginBtn" class="primary">Sign in</button></div>
+        <div id="gradeMfa" class="mfa hidden"></div>
+        <div class="actions" style="margin-top:10px"><button id="gradeReconnect" class="small">Reconnect</button><button id="gradePreview" class="small">Preview login page</button></div>
+      </div>
+      <div id="scheduleService" class="service">
+        <div class="service-top"><div><h3>Visual Schedule Builder</h3><div id="scheduleMessage" class="help">Checking session…</div></div><div class="status"><span id="scheduleDot" class="dot warn"></span><span id="scheduleStatus">Connecting</span></div></div>
+        <div id="scheduleLogin" class="login-row hidden"><div class="field"><label>TTU username/email</label><input id="scheduleUser" autocomplete="username" placeholder="name@ttu.edu"></div><div class="field"><label>Password</label><input id="schedulePass" type="password" autocomplete="current-password" placeholder="Password"></div><button id="scheduleLoginBtn" class="primary">Sign in</button></div>
+        <div id="scheduleMfa" class="mfa hidden"></div>
+        <div class="actions" style="margin-top:10px"><button id="scheduleReconnect" class="small">Reconnect</button><button id="schedulePreview" class="small">Preview login page</button></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>2. Choose the semester and grade-history terms</h2><div class="muted">The planning semester comes from Schedule Builder. Historical terms come from Cognos and can include summer semesters.</div></div></div>
+    <div class="card-body term-layout">
+      <div class="term-panel"><h3>Planning term</h3><div class="help">Which semester are you building a schedule for?</div><div id="termChoices" class="term-grid"><div class="muted">Waiting for Schedule Builder…</div></div><div id="termHint" class="help" style="margin-top:9px"></div></div>
+      <div class="term-panel"><h3>Professor grade-history terms</h3><div class="help">Choose exactly which past terms should influence professor history. Summer terms are available when Cognos contains them.</div><div id="gradeTermControls" style="margin-top:10px"><div class="muted">Connect to Cognos and choose a planning term first.</div></div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>3. Build your course list</h2><div class="muted">Search the live TTU course list. V3 accepts only exact course-code matches, then scans that course's timetable options and your selected grade terms.</div></div><div id="queueBadge" class="muted"></div></div>
+    <div class="card-body">
+      <div class="course-entry"><div class="field"><label for="courseInput">Find a course</label><div class="autocomplete-wrap"><input id="courseInput" type="text" autocomplete="off" placeholder="Start typing: MATH, MATH 1451, ece3312…" disabled><div id="suggestionMenu" class="suggestion-menu hidden"></div></div></div><div id="courseSearchState" class="help search-state">Choose a planning term first.</div></div>
+      <div class="help" style="margin-top:4px">Spacing, capitalization, and hyphens do not matter. Suggestions show only the official course code so prerequisite text cannot be mistaken for a course title.</div>
+      <div id="courseList" class="course-list"><div class="muted">No courses yet.</div></div>
+      <div id="verificationOverview" class="scan-overview hidden"></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>4. Choose professors</h2><div class="muted">Choose professors first. Prefer boosts a professor in ranking; Avoid is a hard rule. Availability updates automatically as your schedule constraints change below.</div></div></div>
+    <div class="card-body"><div id="professorPrefArea" class="prof-pref-list"><div class="muted">Load course data to choose professor preferences.</div></div></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>5. Set schedule constraints and preferences</h2><div class="muted">Fine-tune time and schedule rules after choosing professors. Every change automatically refreshes professor availability and ranked schedules from cached local data.</div></div><button id="relaxBtn" class="small">Relax hard constraints</button></div>
+    <div class="card-body preference-layout">
+      <div id="hardFilterPreview" class="hard-filter-preview pending"><div><strong>Live filter availability</strong><div class="help">Exact local availability counts appear automatically as soon as the selected course data is ready. After that, time/gap/Friday choices preview instantly without another TTU request.</div></div><span class="preview-count">—</span></div>
+      <div class="pref-block"><h3>Earliest class</h3><div id="earliestChoices" class="choice-grid"></div><div class="help" style="margin-top:7px">Example: 10:00 AM means every scheduled meeting must start at 10:00 AM or later. Impossible choices are disabled after the first automatic analysis.</div></div>
+      <div class="pref-block"><h3>Latest class ends</h3><div id="latestChoices" class="choice-grid"></div><div class="help" style="margin-top:7px">Example: 5:00 PM means every scheduled meeting must finish by 5:00 PM.</div></div>
+      <div class="pref-block"><h3>Maximum break between classes</h3><div id="gapChoices" class="choice-grid"></div><div class="help" style="margin-top:7px">Based on same-day gaps between scheduled meetings. Counts update immediately from the local conflict index.</div></div>
+      <div class="pref-block"><h3>Section rules</h3><div class="toggle-row"><label><input id="noFriday" type="checkbox"> No Friday classes</label><label><input id="allowFull" type="checkbox" checked> Allow full</label><label><input id="allowWaitlist" type="checkbox" checked> Allow waitlist</label></div><div class="field" style="margin-top:10px"><label for="honorsMode">Honors sections</label><select id="honorsMode"><option value="either">Honors or regular</option><option value="only">Honors only — Lec H###</option><option value="exclude">Regular only — exclude Lec H###</option></select></div><div class="help" style="margin-top:7px">TTU honors lectures are identified from the VSB section label <strong>Lec H###</strong>. Linked labs/discussions remain attached to that honors lecture.</div></div>
+      <div class="pref-block"><h3>Schedule style</h3><div class="field"><select id="dayPreference"><option value="none">No day-pattern preference</option><option value="mwf">Prefer M/W/F-heavy</option><option value="tr">Prefer T/Th-heavy</option><option value="few-days">Prefer fewer days on campus</option><option value="compact">Prefer compact schedules / shorter gaps</option></select></div></div>
+      <div class="pref-block"><h3>Schedule vs. professor-data balance</h3><div class="slider-row"><span class="help">← Schedule convenience</span><input id="gradeWeight" type="range" min="0" max="100" value="50"><span class="help right">Professor data →</span></div><div id="gradeWeightText" class="balance-readout">Balanced — 50% schedule / 50% professor data</div><div class="help" style="margin-top:7px">Ranking uses TTU grade distribution first. If that professor has no usable TTU history, a sample-aware RMP rating is used as the fallback. If neither source exists, that course is ranked by schedule convenience only. Your explicit Prefer/Avoid choices still apply.</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><div><h2>6. Ranked schedules</h2><div class="muted">Schedules generate automatically when course data becomes ready. Professor choices, course checkboxes, and schedule preferences then re-rank automatically from cached local data; Update schedules remains available as a manual refresh.</div></div><button id="reanalyzeBtn" class="small update-ready">Update schedules</button></div>
+    <div class="card-body"><div id="analysisProgress" class="analysis-progress hidden"><div class="analysis-progress-head"><span id="analysisProgressMessage">Preparing cached timetable data…</span><span id="analysisProgressPercent">0%</span></div><div class="analysis-progress-track"><span id="analysisProgressFill"></span></div><div class="analysis-progress-meta"><span id="analysisProgressStage">Preparing</span><span id="analysisProgressCount"></span></div></div><div class="results-summary"><div class="metric"><span>Conflict-free</span><strong id="baseCount">0</strong></div><div class="metric"><span>Match filters</span><strong id="matchCount">0</strong></div><div class="metric"><span>Timetables ready</span><strong id="readyCount">0</strong></div><div class="metric"><span>Best fit score</span><strong id="bestScore">—</strong></div></div><div id="calendarCourseFilter" class="calendar-course-filter"></div><div id="pinChangeNotice" class="schedule-subset-note ready pin-change-notice hidden"></div><div id="scheduleSubsetNotice" class="schedule-subset-note hidden"></div><div id="analysisNotice" class="conflict">Add courses and wait for their section data to finish loading.</div><div id="resultArea" class="hidden"><div class="schedule-nav"><button id="prevSchedule">← Previous</button><div class="center"><strong id="scheduleIndex">Schedule 1 of 1</strong><span id="scheduleMeta" class="muted"></span></div><div class="schedule-jump"><label for="schedulePicker">Jump to / preview schedules</label><select id="schedulePicker"></select></div><button id="nextSchedule">Next →</button></div><div class="calendar-shell"><div id="calendarHead" class="calendar-head"><div>Time</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div></div><div id="calendarBody" class="calendar-body"></div><div id="weekNav" class="week-nav"><button id="prevWeek">← Previous week</button><div class="week-center"><strong id="weekLabel">Week</strong><div class="week-timeline"><input id="weekSlider" type="range" min="0" max="0" value="0" aria-label="Schedule week"><div id="weekMonths" class="week-months"></div><div id="weekPeriods" class="week-periods"></div><div class="week-source">Mirrors the VSB semester timetable; linked labs/discussions/no-credit meetings stay attached to their course option.</div></div></div><button id="nextWeek">Next week →</button></div></div><div id="sectionCards" class="section-cards"></div><div id="registrationBar" class="registration-bar"></div></div></div>
+  </section>
+
+  <div class="footer">Schedule Builder Analyzer is an independent local tool and does not register for classes. Always review prerequisites, restrictions, seat availability, and final CRNs in official Texas Tech systems before registration.</div>
+</main>
+<div id="profModal" class="modal hidden"><div class="modal-card prof-modal-card"><div class="modal-head"><strong id="profModalTitle">Professor grade-history comparison</strong><button id="closeProfModal">Close</button></div><div id="profModalBody" class="prof-modal-body"></div></div></div>
+<div id="previewModal" class="modal hidden"><div class="modal-card"><div class="modal-head"><strong id="previewTitle">Authentication preview</strong><div class="actions"><button id="refreshPreview">Refresh</button><button id="closePreview">Close</button></div></div><img id="previewImage" class="preview" alt="Texas Tech authentication preview"></div></div>
+<div id="changeConfirmModal" class="modal change-confirm-modal hidden" role="dialog" aria-modal="true" aria-labelledby="changeConfirmTitle"><div class="modal-card change-confirm-card"><h3 id="changeConfirmTitle">Unlock pinned course?</h3><p id="changeConfirmText"></p><div class="change-confirm-actions"><button id="cancelPinnedChange">Cancel</button><button id="confirmPinnedChange" class="primary">Unlock &amp; apply</button></div></div></div>
+<script>
+const $=id=>document.getElementById(id);
+let appState=null,analysis=null,scheduleIndex=0,currentWeekStart="",previewEndpoint="",lastCourseFingerprint="",lastCourseRenderFingerprint="",lastVerificationCompletionFingerprint="",searchTimer=null,searchRetryTimer=null,searchSeq=0,courseSuggestions=[],suggestionIndex=-1,gradeTermDraft=null,lastGradeTermsFingerprint="",analysisDirty=true,analysisRunning=false,analysisRequestSeq=0,analysisAutoTimer=null,analysisAutoPending=false,analysisAutoBlocked=false,analysisProgressState=null,analysisVersion=0,activeScheduleCacheKey="",activeScheduleCacheList=[],schedulePickerBuildKey="",analysisCacheByScope=new Map(),profModalCourse="",profModalFocus="",profModalScope="current",profModalMode="compare",profDetailTerm="all",pinnedCourseOptions={},calendarCourseVisibility={},courseColorAssignments={},nextCourseColorIndex=0,constraintPreviewStale=true,rmpFetchPromise=null,rmpRequestedAt=new Map(),courseControlSaveCount=0,courseRenderPending=false,verificationRefreshPending=false,changeConfirmResolver=null,pinChangeNoticeTimer=null;
+const mfaDraft={grade:"",schedule:""},mfaRemember={grade:false,schedule:false};
+const prefs={earliestStart:null,latestEnd:null,maxGap:null,noFriday:false,allowFull:true,allowWaitlist:true,allowOnline:true,honorsMode:"either",dayPreference:"none",gradeWeight:50};
+
+async function api(path,opts={}){const res=await fetch(path,{cache:"no-store",headers:{"Content-Type":"application/json",...(opts.headers||{})},...opts});let data={};try{data=await res.json()}catch{}if(!res.ok)throw new Error(data.error||`${res.status} ${res.statusText}`);return data}
+function showError(message){if(!message){$("errorBox").classList.add("hidden");$("errorBox").textContent="";return}$("errorBox").textContent=message;$("errorBox").classList.remove("hidden")}
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms))}
+function analysisStageLabel(stage){return({prepare:"Preparing cached data",conflicts:"Checking timetable conflicts",filters:"Applying schedule filters",ranking:"Ranking best schedules",complete:"Complete"})[stage]||"Analyzing schedules"}
+function fullSemesterVerificationComplete(){const rows=(appState?.courses||[]).filter(r=>Number(r.optionCount||0)>0);return rows.length>0&&rows.every(r=>r.verification?.status==="complete")}
+function renderAnalysisProgress(progress=analysisProgressState){
+  const host=$("analysisProgress");if(!host)return;
+  if(!progress){host.classList.add("hidden");host.classList.remove("complete");return}
+  const percent=Math.max(0,Math.min(100,Number(progress.percent||0))),done=progress.status==="complete"||percent>=100,verifiedRefresh=Boolean(progress.verifiedRefresh),visualComplete=done||verifiedRefresh,visualPercent=verifiedRefresh?100:percent;
+  host.classList.remove("hidden");host.classList.toggle("complete",visualComplete);
+  $("analysisProgressFill").style.width=`${visualPercent}%`;
+  $("analysisProgressPercent").textContent=`${Math.round(visualPercent)}%`;
+  $("analysisProgressMessage").textContent=verifiedRefresh?(done?"Full-semester scan complete — ranked calendar refreshed with verified timetable data.":"Full-semester scan complete — refreshing ranked calendar from verified timetable data…"):(progress.message||(done?"Schedule analysis complete.":"Analyzing cached timetable data…"));
+  $("analysisProgressStage").textContent=verifiedRefresh?"Verified timetable data":analysisStageLabel(progress.stage);
+  const processed=Number(progress.processed||0),theoretical=Number(progress.theoretical||0);
+  $("analysisProgressCount").textContent=processed?`${processed.toLocaleString()} combinations checked${theoretical?` • up to ${theoretical.toLocaleString()}`:""}`:"";
+}
+function hydrateCompactAnalysis(raw){
+  if(!raw?.compact)return raw;
+  const catalog=raw.optionCatalog||{};
+  const schedules=(raw.schedules||[]).map(s=>({
+    ...s,
+    courses:(s.courseRefs||[]).map(ref=>catalog?.[ref.courseCode]?.[ref.optionKey]).filter(Boolean)
+  }));
+  return {...raw,schedules};
+}
+function analysisContainsVisibleCourses(){
+  if(!analysis)return false;
+  const scope=new Set(analysis.activeCourseCodes||[]);
+  for(const code of visibleCourseSet())if(!scope.has(code))return false;
+  return true;
+}
+function analysisScopeKey(courseCodes=[...visibleCourseSet()]){
+  return [...courseCodes].sort().join('|');
+}
+function useCachedScopeIfAvailable(){
+  if(analysisDirty)return false;
+  const cached=analysisCacheByScope.get(analysisScopeKey());
+  if(!cached)return false;
+  analysis=cached;constraintPreviewStale=false;analysisVersion++;activeScheduleCacheKey="";activeScheduleCacheList=[];schedulePickerBuildKey="";scheduleIndex=0;currentWeekStart="";analysisAutoPending=false;analysisRunning=false;renderAnalysisProgress({status:"complete",percent:100,stage:"complete",message:"Loaded this course combination instantly from the local analysis cache."});renderAnalysis();return true;
+}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+function fmtTime(min){if(min===null||min===undefined)return "Any";const h=Math.floor(min/60),m=min%60;return `${h%12||12}:${String(m).padStart(2,"0")} ${h>=12?"PM":"AM"}`}
+function constraintGridCount(overrides={}){
+  const grid=analysis?.constraintGrid;if(!grid||constraintPreviewStale)return null;
+  const p={...prefs,noFriday:$("noFriday")?.checked??prefs.noFriday,...overrides};
+  const idx=(arr,value)=>arr.findIndex(v=>(v===null&&value===null)||v===value);
+  const ei=idx(grid.earliest,p.earliestStart??null),li=idx(grid.latest,p.latestEnd??null),gi=idx(grid.maxGap,p.maxGap??null),fi=p.noFriday?1:0;
+  if(ei<0||li<0||gi<0)return null;
+  const i=(((ei*grid.latest.length)+li)*grid.maxGap.length+gi)*2+fi;
+  return Number(grid.counts?.[i]||0);
+}
+function constraintFacetItems(kind,fallback){
+  const grid=analysis?.constraintGrid;if(!grid||constraintPreviewStale)return fallback;
+  const values=kind==="earliestStart"?grid.earliest:kind==="latestEnd"?grid.latest:grid.maxGap,approx=grid.complete===false;
+  return values.map(value=>({value,count:constraintGridCount({[kind]:value})??0,approx}));
+}
+function honorsRuleBlocker(){
+  const mode=$("honorsMode")?.value||prefs.honorsMode||"either";if(mode==="either")return null;
+  for(const rec of selectedCourseRecords()){
+    if(!["ready","ready-partial"].includes(rec.status)||!rec.optionCount)continue;
+    if(mode==="only"&&Number(rec.honorsOptionCount||0)===0)return {courseCode:rec.courseCode,message:`${rec.courseCode} has no Lec H### honors section in the selected term.`};
+    if(mode==="exclude"&&Number(rec.honorsOptionCount||0)===Number(rec.optionCount||0))return {courseCode:rec.courseCode,message:`${rec.courseCode} only has honors lecture options under the loaded section set.`};
+  }
+  return null;
+}
+function renderHardFilterPreview(){
+  const host=$("hardFilterPreview");if(!host)return;
+  const honorsBlock=honorsRuleBlocker();if(honorsBlock){host.className="hard-filter-preview bad";host.innerHTML=`<div><strong>Honors filter cannot build this course set</strong><div class="help">${esc(honorsBlock.message)} Change the Honors sections filter and the schedules will refresh automatically.</div></div><span class="preview-count">0</span>`;return}
+  const count=constraintGridCount();
+  if(constraintPreviewStale||count===null){host.className="hard-filter-preview pending";host.innerHTML='<div><strong>Live filter availability</strong><div class="help">Availability counts refresh automatically after course, honors, seat-status, delivery, or professor rules change. Time/gap/Friday previews are instant once the local analysis is current.</div></div><span class="preview-count">—</span>';return}
+  const complete=analysis?.constraintGrid?.complete!==false;
+  if(complete&&count===0){host.className="hard-filter-preview bad";host.innerHTML='<div><strong>No schedules fit these hard time filters</strong><div class="help">Change an enabled start/end/gap/Friday choice. Zero-result choices are disabled whenever V3 can prove they are impossible from the cached conflict-free combinations.</div></div><span class="preview-count">0</span>';return}
+  if(!complete){host.className="hard-filter-preview pending";host.innerHTML=`<div><strong>Availability preview is safety-limited</strong><div class="help">At least ${count.toLocaleString()} matching combinations were found in the analyzed set. V3 hit its combination safety limit, so zero counts are not treated as proof that a choice is impossible.</div></div><span class="preview-count">≥${count.toLocaleString()}</span>`;return}
+  host.className="hard-filter-preview good";host.innerHTML=`<div><strong>Ready before update</strong><div class="help">${count.toLocaleString()} conflict-free schedule${count===1?'':'s'} fit the selected start/end/gap/Friday rules. This count came entirely from cached local data.</div></div><span class="preview-count">${count.toLocaleString()}</span>`;
+}
+function pct(v){return Number.isFinite(v)?`${Math.round(v*100)}%`:"—"}function gpa(v){return Number.isFinite(v)?v.toFixed(2):"—"}
+function authLabel(s){if(s.connected)return["Connected","good"];if(s.busy)return["Working","warn"];if(s.loginRequired||s.authStep==="login-required")return["Sign in","bad"];if((s.authStep||"").startsWith("mfa"))return["Verify","warn"];return["Connecting","warn"]}
+function renderService(kind,s){const[label,cls]=authLabel(s);$(kind+"Status").textContent=label;$(kind+"Dot").className=`dot ${cls}`;$(kind+"Message").textContent=s.message||"";$(kind+"Login").classList.toggle("hidden",s.connected||(!s.loginRequired&&s.authStep!=="login-required"));renderMfa(kind,s)}
+function renderMfa(kind,s){const box=$(kind+"Mfa"),step=s.authStep||"none";if(!step.startsWith("mfa")){box.classList.add("hidden");box.innerHTML="";return}box.classList.remove("hidden");if(step==="mfa-method"){box.innerHTML=`<div class="help" style="margin-bottom:8px">Texas Tech verification${s.authPhone?` for ${esc(s.authPhone)}`:""}</div><div class="actions"><button class="small send-sms">Send text message</button><button class="small send-voice">Voice call</button></div>`;box.querySelector(".send-sms").onclick=()=>sendMfa(kind,"sms");box.querySelector(".send-voice").onclick=()=>sendMfa(kind,"voice")}else if(step==="mfa-code"){box.innerHTML=`<div class="mfa-row"><div class="field"><label>Verification code</label><input class="mfa-code" inputmode="numeric" autocomplete="one-time-code" placeholder="Code" value="${esc(mfaDraft[kind])}"></div><button class="primary verify-code">Verify</button></div><label class="remember"><input class="remember-box" type="checkbox" ${mfaRemember[kind]?"checked":""}> Register this browser on this private computer</label>`;const code=box.querySelector(".mfa-code"),remember=box.querySelector(".remember-box");code.oninput=()=>mfaDraft[kind]=code.value;remember.onchange=()=>mfaRemember[kind]=remember.checked;box.querySelector(".verify-code").onclick=()=>verifyMfa(kind);code.onkeydown=e=>{if(e.key==="Enter")verifyMfa(kind)}}else{box.innerHTML=`<span class="spinner"></span> <span class="help">Texas Tech is processing authentication…</span>`}}
+async function login(kind){showError("");const user=$(kind+"User").value.trim(),pass=$(kind+"Pass").value;try{await api(kind==="grade"?"/api/login":"/api/v3/schedule/login",{method:"POST",body:JSON.stringify({username:user,password:pass})});$(kind+"Pass").value="";await poll()}catch(e){$(kind+"Pass").value="";showError(e.message);await poll()}}
+async function sendMfa(kind,method){try{await api(kind==="grade"?"/api/mfa/send":"/api/v3/schedule/mfa/send",{method:"POST",body:JSON.stringify({method})});await poll()}catch(e){showError(e.message)}}
+async function verifyMfa(kind){const box=$(kind+"Mfa"),code=box.querySelector(".mfa-code")?.value||mfaDraft[kind]||"",registerBrowser=Boolean(box.querySelector(".remember-box")?.checked??mfaRemember[kind]);mfaDraft[kind]=code;mfaRemember[kind]=registerBrowser;try{await api(kind==="grade"?"/api/mfa/verify":"/api/v3/schedule/mfa/verify",{method:"POST",body:JSON.stringify({code,registerBrowser})});mfaDraft[kind]="";await poll()}catch(e){showError(e.message)}}
+async function reconnect(kind){try{await api(kind==="grade"?"/api/reconnect":"/api/v3/schedule/reconnect",{method:"POST",body:"{}"});await poll()}catch(e){showError(e.message)}}
+function preview(kind){previewEndpoint=kind==="grade"?"/api/auth-preview":"/api/v3/schedule/auth-preview";$("previewTitle").textContent=kind==="grade"?"Cognos authentication preview":"Schedule Builder authentication preview";refreshPreview();$("previewModal").classList.remove("hidden")}
+function refreshPreview(){$("previewImage").src=`${previewEndpoint}?t=${Date.now()}`}
+function closeOpenDropdowns(except=null){
+  document.querySelectorAll("details.grade-term-details[open]").forEach(d=>{if(d!==except)d.open=false});
+  const active=document.activeElement;
+  if(active&&active.tagName==="SELECT"&&active!==except)active.blur();
+}
+function courseJobsActive(){
+  const foregroundScheduleBusy=Boolean(appState?.schedule?.busy&&appState?.schedule?.phase!=="background-verification");
+  return Boolean((appState?.courses||[]).some(c=>["queued","loading-schedule","loading-grades","waiting-login","waiting-schedule-login"].includes(c.status))||appState?.grade?.busy||foregroundScheduleBusy||appState?.processing);
+}
+function gradeTermsLocked(){return courseJobsActive()}
+function allCoursesReady(){
+  const rows=appState?.courses||[];
+  return rows.length>0&&rows.every(c=>["ready","ready-partial"].includes(c.status));
+}
+function selectedCourseRecords(){const visible=visibleCourseSet();return (appState?.courses||[]).filter(c=>visible.has(c.courseCode))}
+function selectedCoursesReady(){const rows=selectedCourseRecords();return rows.length>0&&rows.every(c=>Number(c.optionCount||0)>0)}
+function updateGradeBalanceLabel(){
+  const v=Number($("gradeWeight").value);
+  const schedule=100-v;
+  $("gradeWeightText").textContent=v===50?`Balanced — 50% schedule / 50% professor data`:`${schedule}% schedule / ${v}% professor data`;
+}
+function invalidateAnalysisClient(){
+  analysisRequestSeq++;
+  clearTimeout(analysisAutoTimer);
+  analysisAutoPending=false;
+  analysisRunning=false;
+  $("calendarCourseFilter")?.classList.remove("recalculating");
+}
+function setUpdateButton(){
+  const b=$("reanalyzeBtn");
+  if(analysisRunning||analysisAutoPending){b.disabled=true;b.textContent="Updating…";b.className="small update-dirty";return}
+  const ready=selectedCoursesReady(),honorsImpossible=Boolean(honorsRuleBlocker()),knownImpossible=honorsImpossible||(analysisDirty&&!constraintPreviewStale&&analysis?.constraintGrid?.complete!==false&&constraintGridCount()===0);
+  b.disabled=!ready||knownImpossible;
+  b.textContent=knownImpossible?"No schedules — adjust filters":analysisDirty?"Update schedules":"Schedules up to date";
+  b.className=`small ${analysisDirty&&ready&&!knownImpossible?"update-ready":"update-dirty"}`;
+}
+function markAnalysisDirty({clear=true,constraintStale=true,auto=false,autoDelay=220}={}){
+  invalidateAnalysisClient();
+  analysisDirty=true;
+  analysisAutoBlocked=false;
+  constraintPreviewStale=constraintStale;
+  analysisCacheByScope.clear();
+  analysisProgressState=null;renderAnalysisProgress(null);
+  scheduleIndex=0;
+  if(clear)analysis=null;
+  setUpdateButton();
+  renderAnalysis();
+  renderProfessorPreferences();
+  if(auto)autoAnalyzeIfReady(autoDelay);
+}
+
+function renderTerms(){const box=$("termChoices"),terms=appState?.schedule?.terms||[],current=appState?.selectedTerm||"",foregroundBusy=Boolean((appState?.schedule?.busy&&appState?.schedule?.phase!=="background-verification")||appState?.processing);if(!appState?.schedule?.connected){box.innerHTML='<div class="muted">Connect to Visual Schedule Builder first.</div>';$("termHint").textContent="After sign-in, V3 presses Continue and reads the available terms automatically.";updateCourseSearchAvailability();return}if(!terms.length){box.innerHTML='<div class="muted">Waiting for Schedule Builder terms…</div>';$("termHint").textContent="V3 is opening the Schedule Builder term-selection screen.";updateCourseSearchAvailability();return}box.innerHTML=terms.map(t=>`<button class="term-choice ${t===current?"selected":""}" data-term="${esc(t)}" ${foregroundBusy?"disabled":""}><span><strong>${esc(t)}</strong><span class="term-note">${t===current?"Selected planning term":"Use this term"}</span></span></button>`).join("");box.querySelectorAll("[data-term]").forEach(b=>b.onclick=()=>selectTerm(b.dataset.term));$("termHint").textContent=current?`Planning ${current}. Changing terms keeps the course list and reloads those course sections for the new semester.`:"Choose one term to unlock course search.";updateCourseSearchAvailability()}
+async function selectTerm(term){showError("");closeSuggestions();closeOpenDropdowns();$("courseInput").blur();try{await api("/api/v3/term",{method:"POST",body:JSON.stringify({term})});gradeTermDraft=null;lastGradeTermsFingerprint="";analysis=null;analysisDirty=true;await poll();renderAnalysis();$("courseInput").focus()}catch(e){showError(e.message);await poll()}}
+
+function renderGradeTerms(){
+  const available=appState?.grade?.availableTerms||[],serverSelected=appState?.grade?.selectedTerms||[],planning=appState?.selectedTerm||"",connected=Boolean(appState?.grade?.connected),locked=gradeTermsLocked();
+  const renderKey=JSON.stringify([connected,planning,available,serverSelected,locked]);
+  if(renderKey===lastGradeTermsFingerprint)return;
+  lastGradeTermsFingerprint=renderKey;
+  gradeTermDraft=null;
+  const host=$("gradeTermControls");
+  if(!planning){host.innerHTML='<div class="muted">Choose a planning term first.</div>';return}
+  if(!connected){host.innerHTML='<div class="muted">Connect to Grade Distribution / Cognos to choose historical terms.</div>';return}
+  if(!available.length){host.innerHTML='<div class="muted">No earlier Cognos terms are available for this planning semester.</div>';return}
+  const chosen=new Set(serverSelected);
+  host.innerHTML=`<div class="grade-term-wrap ${locked?"control-locked":""}">
+    <details class="grade-term-details">
+      <summary><span><span class="grade-term-count">${chosen.size}</span> term${chosen.size===1?"":"s"} selected <span class="grade-term-dirty hidden">Not applied</span></span><span class="grade-term-summary-arrow">▾</span></summary>
+      <div class="grade-term-panel">
+        <div class="grade-term-actions">
+          <button type="button" data-term-preset="6">Recent 6</button>
+          <button type="button" data-term-preset="12">Recent 12</button>
+          <button type="button" data-term-clear>Clear</button>
+          <button type="button" class="primary apply" data-term-apply>Apply</button>
+        </div>
+        <div class="grade-term-list">${available.map(t=>`<label class="grade-term-option"><input type="checkbox" value="${esc(t)}" ${chosen.has(t)?"checked":""}> <span>${esc(t)}</span></label>`).join("")}</div>
+      </div>
+    </details>
+  </div>
+  <div class="help" style="margin-top:8px">Choose any individual Fall, Spring, or Summer terms. Changes are applied together so Cognos is not restarted after every checkbox.</div>
+  ${locked?'<div class="locked-note"><strong>Loading in progress.</strong> Grade-history terms are temporarily locked until the current course job finishes.</div>':""}`;
+  const details=host.querySelector("details"),summaryCount=host.querySelector(".grade-term-count"),dirty=host.querySelector(".grade-term-dirty");
+  const selectedNow=()=>[...host.querySelectorAll('input[type="checkbox"]:checked')].map(x=>x.value);
+  const syncSummary=()=>{const vals=selectedNow();summaryCount.textContent=vals.length;gradeTermDraft=vals;dirty.classList.toggle("hidden",JSON.stringify(vals)===JSON.stringify(serverSelected))};
+  host.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.onchange=syncSummary);
+  host.querySelectorAll("[data-term-preset]").forEach(b=>b.onclick=e=>{
+    e.preventDefault();
+    const n=Number(b.dataset.termPreset),set=new Set(available.slice(0,n));
+    host.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=set.has(cb.value));
+    syncSummary();
+  });
+  host.querySelector("[data-term-clear]").onclick=e=>{e.preventDefault();host.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.checked=false);syncSummary()};
+  host.querySelector("[data-term-apply]").onclick=async e=>{
+    e.preventDefault();
+    const vals=selectedNow();
+    if(!vals.length){showError("Select at least one grade-history term before applying.");return}
+    details.open=false;
+    await saveGradeTerms(vals);
+  };
+}
+async function saveGradeTerms(terms){
+  try{
+    showError("");
+    await api("/api/v3/grade-terms",{method:"POST",body:JSON.stringify({terms})});
+    gradeTermDraft=null;
+    lastGradeTermsFingerprint="";
+    analysis=null;
+    analysisDirty=true;
+    await poll();
+    renderAnalysis();
+  }catch(e){
+    gradeTermDraft=null;
+    lastGradeTermsFingerprint="";
+    showError(e.message);
+    await poll();
+  }
+}
+
+function updateCourseSearchAvailability(){const enabled=Boolean(appState?.schedule?.connected&&appState?.selectedTerm);$("courseInput").disabled=!enabled;if(!enabled){closeSuggestions();$("courseSearchState").textContent=appState?.schedule?.connected?"Choose a planning term first.":"Connect to Visual Schedule Builder first."}else if(document.activeElement!==$("courseInput")&&!$("courseInput").value){$("courseSearchState").textContent=`Searching ${appState.selectedTerm}. Type a subject or course number.`}}
+function closeSuggestions(){courseSuggestions=[];suggestionIndex=-1;$("suggestionMenu").classList.add("hidden");$("suggestionMenu").innerHTML=""}
+function renderSuggestions(){const menu=$("suggestionMenu");if(!courseSuggestions.length){menu.classList.add("hidden");menu.innerHTML="";return}menu.innerHTML=courseSuggestions.map((s,i)=>`<button type="button" class="suggestion-item ${i===suggestionIndex?"active":""}" data-suggestion="${i}"><span class="suggestion-code">${esc(s.courseCode)}</span></button>`).join("");menu.classList.remove("hidden");menu.querySelectorAll("[data-suggestion]").forEach(b=>b.onmousedown=e=>{e.preventDefault();chooseSuggestion(Number(b.dataset.suggestion))})}
+async function searchCoursesNow(){clearTimeout(searchRetryTimer);const q=$("courseInput").value.trim(),term=appState?.selectedTerm||"",seq=++searchSeq;if(!term||q.length<2){closeSuggestions();$("courseSearchState").textContent=term?"Type at least 2 characters.":"Choose a planning term first.";return}$("courseSearchState").innerHTML='<span class="spinner"></span> Searching TTU Schedule Builder…';try{const data=await api(`/api/v3/schedule/course-search?q=${encodeURIComponent(q)}&term=${encodeURIComponent(term)}`);if(seq!==searchSeq||q!==$("courseInput").value.trim())return;if(data.busy){closeSuggestions();$("courseSearchState").textContent=data.message||"Schedule Builder is busy. Search will retry automatically.";searchRetryTimer=setTimeout(()=>{if(q===$("courseInput").value.trim())searchCoursesNow()},700);return}courseSuggestions=data.suggestions||[];suggestionIndex=courseSuggestions.length?0:-1;renderSuggestions();$("courseSearchState").textContent=courseSuggestions.length?`${courseSuggestions.length} exact course-code option${courseSuggestions.length===1?"":"s"} found in ${term}.`:(data.warning||`No matching courses found in ${term}.`)}catch(e){if(seq!==searchSeq)return;closeSuggestions();$("courseSearchState").textContent=e.message}}
+function scheduleCourseSearch(){clearTimeout(searchTimer);clearTimeout(searchRetryTimer);const q=$("courseInput").value.trim();if(q.length<2){closeSuggestions();$("courseSearchState").textContent=appState?.selectedTerm?"Type at least 2 characters.":"Choose a planning term first.";return}searchTimer=setTimeout(searchCoursesNow,425)}
+async function chooseSuggestion(index){const item=courseSuggestions[index];if(!item)return;const existing=new Set((appState?.courses||[]).map(c=>c.courseCode));closeSuggestions();$("courseInput").value="";if(existing.has(item.courseCode)){$("courseSearchState").textContent=`${item.courseCode} is already in your course list.`;return}$("courseSearchState").innerHTML=`<span class="spinner"></span> Adding ${esc(item.courseCode)}…`;try{await api("/api/v3/courses/add",{method:"POST",body:JSON.stringify({courses:[item.courseCode]})});$("courseSearchState").textContent=`${item.courseCode} added. You can immediately search for another course.`;analysis=null;analysisDirty=true;await poll();renderAnalysis();$("courseInput").focus()}catch(e){showError(e.message);$("courseSearchState").textContent="Course was not added."}}
+
+function progressLabel(r){const p=r.progress||{};if(p.stage==="sections")return p.total?`Scanning timetable options ${p.current}/${p.total}`:"Opening course and finding timetable options";if(p.stage==="grades")return p.total?`Reading grade history ${p.current}/${p.total}`:"Reading selected grade history";if(p.stage==="grades-queued")return"Timetable options ready; grade history queued";if(p.stage==="ready")return"Course data ready";if(p.stage==="partial")return r.gradeFailedTerms?.length?"Course data ready — some grade history could not be verified":"Course data ready — no grade history for selected terms";if(p.stage==="error")return"Stopped";return"Waiting in queue"}
+function verificationLabel(v){if(v?.status==="complete")return"Full semester scan complete";if(v?.status==="running")return"Full semester scan running";if(v?.status==="error")return"Full semester scan stopped";return"Full semester scan pending"}
+function renderVerificationOverview(){
+  const host=$("verificationOverview"),rows=(appState?.courses||[]).filter(r=>Number(r.optionCount||0)>0);if(!host)return;
+  // A failed/not-yet-loaded course has nothing to deep-verify, so do not show a
+  // misleading 0/1 background-scan card for it. Verification begins only after the
+  // fast timetable exists.
+  if(!rows.length){host.classList.add("hidden");host.innerHTML="";return}
+  const complete=rows.filter(r=>r.verification?.status==="complete").length,avg=Math.round(rows.reduce((sum,r)=>sum+Math.max(0,Math.min(100,Number(r.verification?.percent||0))),0)/rows.length),done=complete===rows.length;
+  const doneHelp=analysis&&analysisDirty?"Full-semester scanning is complete. The ranked calendar will refresh automatically with the finished scan.":"Every loaded course has finished its full timetable scan.";
+  host.className=`scan-overview ${done?"ready":"pending"}`;
+  host.innerHTML=`<div class="scan-overview-top"><div><strong>${done?"Full semester scan complete":"Background full-semester verification"}</strong><div class="help">${done?doneHelp:"All fast timetables load first so the calendar is usable immediately. Full-semester verification starts afterward for labs, discussions, exams, holidays, and unusual meeting dates."}</div></div><span class="status"><span class="dot ${done?"good":"bad"}"></span>${complete}/${rows.length}</span></div><div class="semester-scan-bar ${done?"complete":""}"><span style="width:${done?100:Math.max(2,avg)}%"></span></div><div class="course-progress-label"><span>${done?"Verified timetable data":"Fast timetables ready; exact semester verification is still running"}</span><span>${done?100:avg}%</span></div>`
+}
+function courseControlIsActive(){
+  const active=document.activeElement;
+  return courseControlSaveCount>0||Boolean(active&&active.matches&&active.matches('#courseList select[data-priority], #courseList select[data-delivery]'));
+}
+function flushPendingCourseRender(){
+  if(!courseRenderPending||courseControlIsActive())return;
+  courseRenderPending=false;
+  renderCourses();
+}
+function renderCourses(){
+  // Native <select> popups are destroyed if their DOM node is replaced. Background
+  // full-semester verification updates every second, so never rebuild course rows
+  // while the user is interacting with or saving a course-setting dropdown.
+  if(courseControlIsActive()){courseRenderPending=true;return}
+  courseRenderPending=false;
+  const rows=appState?.courses||[];
+  const verifyCount=Number(appState?.verificationQueueLength||0);
+  $("queueBadge").textContent=appState?.processing?`${appState.queueLength} course job${appState.queueLength===1?"":"s"} active`:verifyCount?`${verifyCount} background timetable scan${verifyCount===1?"":"s"}`:(rows.length?"Edit courses without restarting":"");
+  if(!rows.length){$("courseList").innerHTML='<div class="muted">No courses yet. Search above and select your first course.</div>';renderVerificationOverview();return}
+  $("courseList").innerHTML=rows.map(r=>{
+    const loading=["queued","loading-schedule","loading-grades","waiting-login","waiting-schedule-login"].includes(r.status);
+    const controlsLocked=loading;
+    const finished=["ready","ready-partial"].includes(r.status),tone=r.status==="error"?"bad":finished?"good":"warn",meta=[];
+    if(r.optionCount)meta.push(`${r.optionCount} timetable option${r.optionCount===1?"":"s"}`);
+    if(r.honorsOptionCount)meta.push(`${r.honorsOptionCount} honors option${r.honorsOptionCount===1?"":"s"}`);
+    if(r.gradeTerms?.length)meta.push(`${r.gradeTerms.length} grade term${r.gradeTerms.length===1?"":"s"}`);
+    if(r.cached)meta.push("cached");
+    const pref=r.preferences||{professorPriority:3,delivery:"either"},p=r.progress||{percent:0};
+    const onlineImpossible=r.optionCount>0&&r.onlineOptionCount===0,inPersonImpossible=r.optionCount>0&&r.inPersonOptionCount===0;
+    const deliveryWarning=pref.delivery==="online"&&onlineImpossible?"No online-only options were found for this course.":pref.delivery==="in-person"&&inPersonImpossible?"No in-person-only options were found for this course.":"";
+    const onlineDisabled=controlsLocked||(onlineImpossible&&pref.delivery!=="online"),inPersonDisabled=controlsLocked||(inPersonImpossible&&pref.delivery!=="in-person");
+    return `<div class="course-row ${loading?"loading":""}">
+      <div>
+        <div class="course-code" style="--course-color:${courseColor(r.courseCode)}"><span class="course-color-dot"></span>${esc(r.courseCode)}</div>
+        <div class="course-meta">${meta.join(" • ")||esc(r.term||"")}</div>
+      </div>
+      <div class="course-status">
+        <span class="status"><span class="dot ${tone}"></span>${loading?'<span class="spinner"></span> ':''}${esc(r.message||r.status)}</span>
+        ${r.error?`<div class="course-meta" style="color:var(--bad)">${esc(r.error)}</div>`:""}
+        <div class="course-progress ${finished?"done":""}"><span style="width:${Math.max(0,Math.min(100,Number(p.percent||0)))}%"></span></div>
+        <div class="course-progress-label"><span>${esc(progressLabel(r))}</span><span>${Math.max(0,Math.min(100,Number(p.percent||0)))}%</span></div>
+        ${Number(r.optionCount||0)>0?(()=>{const v=r.verification||{status:"pending",percent:0,message:"Full semester scan queued."},done=v.status==="complete",vp=done?100:Math.max(2,Math.min(99,Number(v.percent||0)));return `<div class="semester-scan"><div class="semester-scan-head"><span class="${done?"complete":"pending"}">${esc(verificationLabel(v))}</span><span>${vp}%</span></div><div class="semester-scan-bar ${done?"complete":""}"><span style="width:${vp}%"></span></div><div class="semester-scan-note">${esc(v.message||"")}${v.status==="error"?` <button class="small" data-verify-retry="${esc(r.courseCode)}">Retry full scan</button>`:""}</div></div>`})():''}
+      </div>
+      <div class="course-settings">
+        ${r.status==="error"?`<div class="course-retry-panel"><div class="course-retry-copy"><strong>Course loading failed</strong><span>The course stays in your list. Retry uses the current VSB session and clears only the courses actually present.</span></div><button class="small" data-retry="${esc(r.courseCode)}">Retry</button></div>`:`<div>
+          <label>Professor priority</label>
+          <select data-priority="${esc(r.courseCode)}" ${controlsLocked?"disabled":""} title="${controlsLocked?"Available after this course finishes loading":""}">
+            <option value="1" ${pref.professorPriority===1?"selected":""}>1 — Low</option>
+            <option value="2" ${pref.professorPriority===2?"selected":""}>2 — Below normal</option>
+            <option value="3" ${pref.professorPriority===3?"selected":""}>3 — Normal</option>
+            <option value="4" ${pref.professorPriority===4?"selected":""}>4 — High</option>
+            <option value="5" ${pref.professorPriority===5?"selected":""}>5 — Highest</option>
+          </select>
+        </div>
+        <div>
+          <label>Delivery</label>
+          <select data-delivery="${esc(r.courseCode)}" ${controlsLocked?"disabled":""} title="${controlsLocked?"Available after this course finishes loading":""}">
+            <option value="either" ${pref.delivery==="either"?"selected":""}>Either (${r.optionCount||"?"})</option>
+            <option value="in-person" ${pref.delivery==="in-person"?"selected":""} ${inPersonDisabled?"disabled":""}>In person (${r.inPersonOptionCount||0})</option>
+            <option value="online" ${pref.delivery==="online"?"selected":""} ${onlineDisabled?"disabled":""}>Online (${r.onlineOptionCount||0})</option>
+          </select>
+          ${deliveryWarning?`<div class="course-warning">${esc(deliveryWarning)}</div>`:""}
+        </div>`}
+      </div>
+      <div class="actions">
+        <button class="small danger" data-delete="${esc(r.courseCode)}" title="Remove ${esc(r.courseCode)}" aria-label="Remove ${esc(r.courseCode)}">×</button>
+      </div>
+    </div>`;
+  }).join("");
+  renderVerificationOverview();
+  document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=()=>deleteCourse(b.dataset.delete));
+  document.querySelectorAll("[data-retry]").forEach(b=>b.onclick=()=>retryCourse(b.dataset.retry));
+  document.querySelectorAll("[data-verify-retry]").forEach(b=>b.onclick=()=>retryVerification(b.dataset.verifyRetry));
+  document.querySelectorAll("[data-priority]").forEach(el=>el.onchange=()=>setCoursePref(el.dataset.priority,{professorPriority:Number(el.value)}));
+  document.querySelectorAll("[data-delivery]").forEach(el=>el.onchange=()=>setCoursePref(el.dataset.delivery,{delivery:el.value}));
+}
+async function retryVerification(code){try{await api("/api/v3/courses/verify",{method:"POST",body:JSON.stringify({courseCode:code})});await poll()}catch(e){showError(e.message)}}
+function invalidatePinnedScheduleView(){activeScheduleCacheKey="";activeScheduleCacheList=[];schedulePickerBuildKey=""}
+function renderPinChangeNotice(message=""){
+  const host=$("pinChangeNotice");if(!host)return;
+  if(!message){host.textContent="";host.classList.add("hidden");return}
+  host.textContent=message;host.className="schedule-subset-note ready pin-change-notice";
+  clearTimeout(pinChangeNoticeTimer);pinChangeNoticeTimer=setTimeout(()=>renderPinChangeNotice(""),5200);
+}
+function closePinnedChangeConfirm(ok){
+  const modal=$("changeConfirmModal");if(modal)modal.classList.add("hidden");
+  const resolve=changeConfirmResolver;changeConfirmResolver=null;if(resolve)resolve(Boolean(ok));
+}
+function confirmPinnedCourseChange(courseCode,changeDescription){
+  if(!pinnedCourseOptions[courseCode])return Promise.resolve(true);
+  if(changeConfirmResolver)closePinnedChangeConfirm(false);
+  $("changeConfirmTitle").textContent=`Unlock ${courseCode}?`;
+  $("changeConfirmText").textContent=`${courseCode} is currently locked to one timetable option. ${changeDescription} can select a different section, professor, delivery mode, or meeting time. Unlock the course and apply this change?`;
+  $("changeConfirmModal").classList.remove("hidden");
+  setTimeout(()=>$("confirmPinnedChange")?.focus(),0);
+  return new Promise(resolve=>{changeConfirmResolver=resolve});
+}
+function unlockPinnedCourseAfterApproval(courseCode,reason){
+  const key=pinnedCourseOptions[courseCode]||"";if(!key)return "";
+  delete pinnedCourseOptions[courseCode];invalidatePinnedScheduleView();renderCalendarCourseFilter();
+  if(analysis)renderSchedule();
+  renderPinChangeNotice(`${courseCode} was unlocked because ${reason}. The calendar can now choose a new compatible option.`);
+  return key;
+}
+function restorePinnedCourse(courseCode,optionKey){
+  if(!optionKey)return;pinnedCourseOptions[courseCode]=optionKey;invalidatePinnedScheduleView();renderCalendarCourseFilter();if(analysis)renderSchedule();
+}
+async function setCoursePref(code,change){
+  const rec=(appState?.courses||[]).find(c=>c.courseCode===code);
+  const before=rec?{...(rec.preferences||{})}:null;
+  const changingDelivery=Object.prototype.hasOwnProperty.call(change,"delivery");
+  const changingPriority=Object.prototype.hasOwnProperty.call(change,"professorPriority");
+  const nextDelivery=change.delivery, nextPriority=change.professorPriority;
+  const noChange=rec&&((changingDelivery&&rec.preferences?.delivery===nextDelivery)||(changingPriority&&Number(rec.preferences?.professorPriority||3)===Number(nextPriority)));
+  if(noChange)return;
+  const description=changingDelivery?`Changing delivery to ${nextDelivery==='online'?'Online':nextDelivery==='in-person'?'In person':'Either'}`:`Changing professor priority to ${nextPriority}/5`;
+  const approved=await confirmPinnedCourseChange(code,description);
+  if(!approved){
+    const sel=changingDelivery?document.querySelector(`[data-delivery="${CSS.escape(code)}"]`):document.querySelector(`[data-priority="${CSS.escape(code)}"]`);
+    if(sel&&before)sel.value=changingDelivery?(before.delivery||'either'):String(before.professorPriority||3);
+    return;
+  }
+  const unlockedPin=unlockPinnedCourseAfterApproval(code,description.toLowerCase());
+  if(rec)rec.preferences={...(rec.preferences||{}),...change};
+  courseControlSaveCount++;
+  try{
+    await api("/api/v3/courses/preferences",{method:"POST",body:JSON.stringify({courseCode:code,...change})});
+    await poll();
+    markAnalysisDirty({clear:false,constraintStale:changingDelivery,auto:true});
+  }catch(e){
+    if(rec&&before)rec.preferences=before;
+    restorePinnedCourse(code,unlockedPin);
+    showError(e.message);
+    await poll();
+  }finally{
+    courseControlSaveCount=Math.max(0,courseControlSaveCount-1);
+    setTimeout(flushPendingCourseRender,0);
+  }
+}
+async function setProfessorPreference(code,name,preference){
+  const rec=(appState?.courses||[]).find(c=>c.courseCode===code);
+  const prof=rec?.professors?.find(p=>p.name===name);
+  const previous=prof?.preference||'neutral';
+  if(previous===preference)return;
+  const actionLabel=preference==='prefer'?`Preferring ${name}`:preference==='avoid'?`Avoiding ${name}`:`Setting ${name} to Neutral`;
+  const approved=await confirmPinnedCourseChange(code,actionLabel);
+  if(!approved)return;
+  const unlockedPin=unlockPinnedCourseAfterApproval(code,`${actionLabel.toLowerCase()} changes the professor rules`);
+  if(prof)prof.preference=preference;
+  // The professor state changed optimistically. Hide availability derived from the
+  // previous analysis until the local server saves the preference and re-ranks.
+  analysisDirty=true;
+  constraintPreviewStale=true;
+  // Paint the choice immediately. The server remains authoritative and poll() syncs
+  // the full state after the request succeeds.
+  renderProfessorPreferences();
+  if(!$("profModal").classList.contains('hidden')&&profModalCourse===code){profModalFocus=profModalFocus||name;renderProfessorModal();}
+  try{
+    await api("/api/v3/courses/preferences",{method:"POST",body:JSON.stringify({courseCode:code,professorName:name,professorPreference:preference})});
+    await poll();
+    markAnalysisDirty({clear:false,constraintStale:true,auto:true});
+    if(!$("profModal").classList.contains('hidden')&&profModalCourse===code){renderProfessorModal();}
+  }catch(e){
+    if(prof)prof.preference=previous;
+    restorePinnedCourse(code,unlockedPin);
+    renderProfessorPreferences();
+    if(!$("profModal").classList.contains('hidden')&&profModalCourse===code)renderProfessorModal();
+    showError(e.message);
+  }
+}
+const RMP_SCHOOL_ID='1011';
+function professorDisplayName(name){const value=String(name||'').trim();if(!value.includes(','))return value;const parts=value.split(',');return (parts.slice(1).join(',').trim()+' '+parts[0].trim()).trim()}
+function rmpUrl(name,rmp=null){return rmp?.profileUrl||`https://www.ratemyprofessors.com/search/professors/${RMP_SCHOOL_ID}?q=${encodeURIComponent(professorDisplayName(name))}`}
+function rmpHasRatings(rmp){const n=Number(rmp?.numRatings||0),rating=Number(rmp?.avgRating);return rmp?.status==='success'&&n>0&&Number.isFinite(rating)&&rating>=1&&rating<=5}
+function rmpSummaryHtml(rmp){
+  if(!rmp)return '<span class="muted">RMP loading…</span>';
+  if(rmp.status!=='success')return `<span class="muted">RMP ${rmp.status==='ambiguous'?'match ambiguous':'profile not matched'}</span>`;
+  const parts=[],hasRatings=rmpHasRatings(rmp);
+  if(hasRatings)parts.push(`RMP ${Number(rmp.avgRating).toFixed(1)}/5`);
+  if(hasRatings&&Number.isFinite(Number(rmp.avgDifficulty))&&Number(rmp.avgDifficulty)>0)parts.push(`Difficulty ${Number(rmp.avgDifficulty).toFixed(1)}/5`);
+  if(hasRatings&&Number.isFinite(Number(rmp.wouldTakeAgainPercent)))parts.push(`${Math.round(Number(rmp.wouldTakeAgainPercent))}% take again`);
+  if(hasRatings)parts.push(`${Number(rmp.numRatings).toLocaleString()} ratings`);
+  const tags=(rmp.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t.name)}</span>`).join('');
+  return `${esc(parts.join(' • ')||'RMP profile found')}${tags?`<div>${tags}</div>`:''}`;
+}
+function rmpCardHtml(rmp){
+  if(!rmp)return '<div class="prof-rmp-card loading">Rate My Professors data is loading…</div>';
+  if(rmp.status!=='success')return `<div class="prof-rmp-card loading">RMP ${rmp.status==='ambiguous'?'match is ambiguous — use the RMP link to verify the professor.':'profile was not confidently matched.'}</div>`;
+  const hasRatings=rmpHasRatings(rmp);
+  const rating=hasRatings?`${Number(rmp.avgRating).toFixed(1)}/5`:'—';
+  const difficulty=hasRatings&&Number.isFinite(Number(rmp.avgDifficulty))&&Number(rmp.avgDifficulty)>0?`${Number(rmp.avgDifficulty).toFixed(1)}/5`:'—';
+  const takeAgain=hasRatings&&Number.isFinite(Number(rmp.wouldTakeAgainPercent))?`${Math.round(Number(rmp.wouldTakeAgainPercent))}%`:'—';
+  const ratings=hasRatings?Number(rmp.numRatings).toLocaleString():'—';
+  const tags=(rmp.tags||[]).slice(0,3).map(t=>`<span class="tag">${esc(t.name)}</span>`).join('');
+  return `<div class="prof-rmp-card"><div class="prof-rmp-head"><strong>Rate My Professors</strong><span class="prof-rmp-source">student feedback</span></div><div class="prof-rmp-grid"><div class="prof-rmp-stat"><span>Rating</span><strong>${esc(rating)}</strong></div><div class="prof-rmp-stat"><span>Difficulty</span><strong>${esc(difficulty)}</strong></div><div class="prof-rmp-stat"><span>Take again</span><strong>${esc(takeAgain)}</strong></div><div class="prof-rmp-stat"><span>Ratings</span><strong>${esc(ratings)}</strong></div></div>${tags?`<div class="prof-rmp-tags">${tags}</div>`:''}</div>`;
+}
+function queueRmpEnrichment(){
+  if(rmpFetchPromise||!appState)return;
+  const now=Date.now(),items=[];
+  for(const c of appState.courses||[]){
+    const pool=[...(c.professors||[]),...(profModalCourse===c.courseCode?(c.historicalProfessors||[]):[])];
+    for(const p of pool){
+      if(!p?.name||p.rmp)continue;
+      const key=`${c.courseCode}::${p.key||p.name}`;
+      if(now-Number(rmpRequestedAt.get(key)||0)<30*60*1000)continue;
+      rmpRequestedAt.set(key,now);items.push({name:p.name,courseCode:c.courseCode});
+      if(items.length>=30)break;
+    }
+    if(items.length>=30)break;
+  }
+  if(!items.length)return;
+  rmpFetchPromise=api('/api/rmp/batch',{method:'POST',body:JSON.stringify({items})})
+    .then(()=>poll())
+    .catch(()=>{})
+    .finally(()=>{rmpFetchPromise=null});
+}
+function professorStatText(p){
+  const parts=[];
+  if(Number.isFinite(p.adjustedGpa))parts.push(`Adj GPA ${gpa(p.adjustedGpa)}`);
+  if(Number.isFinite(p.predictedGpa))parts.push(`Forecast ${gpa(p.predictedGpa)} (${p.predictionConfidence||'low'})`);
+  if(Number.isFinite(p.dfwRate))parts.push(`DFW ${pct(p.dfwRate)}`);
+  if(p.students)parts.push(`${p.students} students`);
+  if(Number.isFinite(p.trend))parts.push(p.trend>.03?`↑ ${p.trend.toFixed(2)}`:p.trend<-.03?`↓ ${Math.abs(p.trend).toFixed(2)}`:'Stable');
+  return parts.join(' • ')||'No selected-term grade history';
+}
+function professorAvailabilityFor(courseCode,professor){
+  if(!analysis||analysisDirty||analysisRunning||analysisAutoPending)return null;
+  if(!visibleCourseSet().has(courseCode)||!(analysis.activeCourseCodes||[]).includes(courseCode))return null;
+  const key=professor?.key||String(professor?.name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,' ');
+  const count=Number(analysis?.professorAvailability?.[courseCode]?.[key]||0);
+  return {count,available:count>0,approx:Boolean(analysis?.truncated)};
+}
+function renderProfessorPreferences(){
+  const host=$('professorPrefArea'),courses=appState?.courses||[];
+  if(!courses.length){host.innerHTML='<div class="muted">Add courses first.</div>';return}
+  const ready=courses.filter(c=>["ready","ready-partial"].includes(c.status));
+  if(!ready.length){host.innerHTML='<div class="muted">Professor choices appear as each course finishes loading.</div>';return}
+  host.innerHTML=ready.map(c=>{
+    const profs=c.professors||[];
+    return `<div class="prof-course"><div class="prof-course-head"><h3>${esc(c.courseCode)}</h3><button class="small" data-compare-course="${esc(c.courseCode)}">Compare professors ↗</button></div>${profs.length?`<div class="prof-grid">${profs.map(p=>{
+      const availability=professorAvailabilityFor(c.courseCode,p);
+      const unavailable=Boolean(availability&&!availability.available&&p.preference!=='avoid');
+      const availabilityHtml=p.preference==='avoid'?`<div class="prof-availability">Excluded by your Avoid preference</div>`:availability?(availability.available?`<div class="prof-availability available">${availability.approx?'≥':''}${availability.count.toLocaleString()} compatible schedule${availability.count===1?'':'s'}</div>`:`<div class="prof-availability">Unavailable with current constraints</div>`):'';
+      return `<div class="prof-row ${p.preference==='prefer'?'prefer':p.preference==='avoid'?'avoid':''} ${unavailable?'unavailable':''}" ${unavailable?'title="No current schedule combination can use this professor under the active section and time constraints."':''}><div class="prof-main"><div class="prof-name">${esc(p.name)}</div><div class="prof-data-label">TTU grade history</div><div class="prof-stats">${esc(professorStatText(p))}${p.sections?.length?` • ${esc(p.sections.join(', '))}`:''}</div>${rmpCardHtml(p.rmp)}${availabilityHtml}</div><div class="prof-actions"><button title="Open individual professor analysis" data-prof-detail="${esc(c.courseCode)}" data-prof-name="${esc(p.name)}">Profile ↗</button><a class="button small" href="${esc(rmpUrl(p.name,p.rmp))}" target="_blank" rel="noopener noreferrer" title="Open ${esc(p.name)} on Rate My Professors">RMP ↗</a><button class="${p.preference==='prefer'?'selected-prefer':''}" data-prof-pref="prefer" data-prof-course="${esc(c.courseCode)}" data-prof-name="${esc(p.name)}">Prefer</button><button class="${p.preference==='neutral'?'selected-neutral':''}" data-prof-pref="neutral" data-prof-course="${esc(c.courseCode)}" data-prof-name="${esc(p.name)}">Neutral</button><button class="${p.preference==='avoid'?'selected-avoid':''}" data-prof-pref="avoid" data-prof-course="${esc(c.courseCode)}" data-prof-name="${esc(p.name)}">Avoid</button></div></div>`
+    }).join('')}</div>`:'<div class="muted">No named professors were listed for the available sections.</div>'}</div>`
+  }).join('')+`<div class="help prof-help">Avoid removes that professor's sections entirely. Prefer keeps other professors available but gives the preferred professor a ranking boost. Dimmed professors currently cannot appear in any compatible schedule under the selected rules; their saved preference is preserved if your constraints change. Course-level Professor priority controls how strongly professor data matters for that course. Ranking uses TTU grade history whenever it exists; RMP is used only as a fallback for a professor with no usable TTU history. If neither exists, timing/convenience decides unless you explicitly Prefer or Avoid that professor.</div>`;
+  host.querySelectorAll('[data-prof-pref]').forEach(b=>b.onclick=()=>setProfessorPreference(b.dataset.profCourse,b.dataset.profName,b.dataset.profPref));
+  host.querySelectorAll('[data-prof-detail]').forEach(b=>b.onclick=()=>openProfessorDetail(b.dataset.profDetail,b.dataset.profName));
+  host.querySelectorAll('[data-compare-course]').forEach(b=>b.onclick=()=>openProfessorCompare(b.dataset.compareCourse,''));
+}
+function professorTrendLabel(p){
+  return Number.isFinite(p.trend)?(p.trend>.03?`↑ ${p.trend.toFixed(2)}`:p.trend<-.03?`↓ ${Math.abs(p.trend).toFixed(2)}`:'Stable'):'—';
+}
+function professorTermMini(p){
+  const terms=Array.isArray(p.terms)?p.terms:[];
+  if(!terms.length)return 'No selected-term history';
+  return [...terms].reverse().map(t=>`${t.term} ${gpa(t.gpa)}`).join(' • ');
+}
+function professorModalPool(rec){
+  const current=(rec.professors||[]).map(p=>({...p,currentTerm:true}));
+  const historyOnly=(rec.historicalProfessors||[]).map(p=>({...p,currentTerm:false}));
+  let pool=profModalScope==='current'?current:[...current,...historyOnly];
+  if(profModalScope.startsWith('term:')){
+    const wanted=profModalScope.slice(5);
+    pool=pool.filter(p=>(p.terms||[]).some(t=>t.term===wanted));
+  }
+  return pool.sort((a,b)=>{
+    const am=professorMetricsForScope(rec,a),bm=professorMetricsForScope(rec,b),av=Number.isFinite(am.adjustedGpa)?am.adjustedGpa:-1,bv=Number.isFinite(bm.adjustedGpa)?bm.adjustedGpa:-1;
+    return bv-av||String(a.name).localeCompare(String(b.name));
+  });
+}
+function modalProfessor(rec,name){
+  const key=String(name||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,' ');
+  return [...(rec.professors||[]),...(rec.historicalProfessors||[])].find(p=>p.name===name||String(p.key||'')===key)||null;
+}
+function aggregateProfessorTerms(terms){
+  const out={A:0,B:0,C:0,D:0,F:0,W:0,students:0,gpa:null,aRate:null,abcRate:null,dfwRate:null};
+  for(const t of terms||[])for(const k of ['A','B','C','D','F','W'])out[k]+=Number(t[k]||0);
+  const graded=out.A+out.B+out.C+out.D+out.F,dfwDen=graded+out.W;
+  out.students=graded;out.gpa=graded?(4*out.A+3*out.B+2*out.C+out.D)/graded:null;out.aRate=graded?out.A/graded:null;out.abcRate=graded?(out.A+out.B+out.C)/graded:null;out.dfwRate=dfwDen?(out.D+out.F+out.W)/dfwDen:null;
+  return out;
+}
+function adjustedForProfessor(rec,profMetrics,selectedTerms){
+  if(!Number.isFinite(profMetrics.gpa))return null;
+  const courseTerms=(rec.courseGradeTerms||[]).filter(t=>selectedTerms.includes(t.term));
+  const course=aggregateProfessorTerms(courseTerms);
+  const mean=Number.isFinite(course.gpa)?course.gpa:(Number.isFinite(rec.courseGrade?.gpa)?rec.courseGrade.gpa:2.75);
+  return ((profMetrics.gpa*profMetrics.students)+(mean*25))/(profMetrics.students+25);
+}
+function professorMetricsForScope(rec,p){
+  if(profModalScope.startsWith('term:')){
+    const term=profModalScope.slice(5),selected=(p.terms||[]).filter(t=>t.term===term),metrics=aggregateProfessorTerms(selected);
+    return {...metrics,adjustedGpa:adjustedForProfessor(rec,metrics,[term]),trend:null,predictedGpa:null,predictionLow:null,predictionHigh:null,predictionConfidence:'insufficient'};
+  }
+  return {gpa:p.gpa,adjustedGpa:p.adjustedGpa,aRate:p.aRate,dfwRate:p.dfwRate,students:p.students||0,trend:p.trend,predictedGpa:p.predictedGpa,predictionLow:p.predictionLow,predictionHigh:p.predictionHigh,predictionConfidence:p.predictionConfidence};
+}
+function curvePath(points){if(points.length<2)return'';let d=`M ${points[0][0]} ${points[0][1]}`;for(let i=0;i<points.length-1;i++){const p0=points[Math.max(0,i-1)],p1=points[i],p2=points[i+1],p3=points[Math.min(points.length-1,i+2)],c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6;d+=` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2[0]} ${p2[1]}`}return d}
+function renderProfessorCurve(svg,metrics){
+  svg.innerHTML='';const NS='http://www.w3.org/2000/svg',W=640,H=225,L=40,R=14,T=20,B=34,cw=W-L-R,ch=H-T-B,counts={F:metrics.F,D:metrics.D,C:metrics.C,B:metrics.B,A:metrics.A},max=Math.max(1,...Object.values(counts)),X=x=>L+x/100*cw,Y=v=>T+ch-v/max*ch;
+  for(let x=0;x<=100;x+=20){const line=document.createElementNS(NS,'line');line.setAttribute('x1',X(x));line.setAttribute('x2',X(x));line.setAttribute('y1',T);line.setAttribute('y2',T+ch);line.setAttribute('stroke','#eee');svg.appendChild(line);const tx=document.createElementNS(NS,'text');tx.setAttribute('x',X(x));tx.setAttribute('y',H-12);tx.setAttribute('text-anchor','middle');tx.setAttribute('font-size','9');tx.setAttribute('fill','#68707c');tx.textContent=x;svg.appendChild(tx)}
+  const pts=[[X(0),Y(0)],...[['F',50],['D',65],['C',75],['B',85],['A',95]].map(([g,x])=>[X(x),Y(counts[g])]),[X(100),Y(0)]],path=document.createElementNS(NS,'path');path.setAttribute('d',curvePath(pts));path.setAttribute('fill','none');path.setAttribute('stroke','#cc0000');path.setAttribute('stroke-width','3.5');path.setAttribute('stroke-linecap','round');svg.appendChild(path);
+}
+function renderProfessorDonut(el,legend,metrics){
+  const colors={A:'#2e8b57',B:'#5b8fd1',C:'#d1a742',D:'#d77a32',F:'#c04a4a'},grades=['A','B','C','D','F'],vals=grades.map(g=>Number(metrics[g]||0)),total=vals.reduce((a,b)=>a+b,0);let cur=0,stops=[];grades.forEach((g,i)=>{const share=total?100*vals[i]/total:0,next=cur+share;stops.push(`${colors[g]} ${cur}% ${next}%`);cur=next});el.style.background=total?`conic-gradient(${stops.join(',')})`:'#eee';el.innerHTML=`<div class="prof-donut-center"><div><strong>${total}</strong>grades</div></div>`;legend.innerHTML=grades.map((g,i)=>`<div class="prof-grade-legend-row"><span class="prof-grade-swatch" style="background:${colors[g]}"></span><strong>${g}</strong><span>${vals[i]} students</span><span>${total?(100*vals[i]/total).toFixed(1)+'%':'—'}</span></div>`).join('');
+}
+function renderProfessorComparison(){
+  const courseCode=profModalCourse,focusName=profModalFocus,rec=(appState?.courses||[]).find(c=>c.courseCode===courseCode);if(!rec)return;
+  $('profModalTitle').textContent=`${courseCode} — compare professors`;
+  const current=rec.professors||[],historyOnly=rec.historicalProfessors||[],selectedTerms=rec.requestedGradeTerms||appState?.grade?.selectedTerms||[],pool=professorModalPool(rec),planningTerm=rec.term||appState?.selectedTerm||'planning term';
+  const scopeOptions=[`<option value="current" ${profModalScope==='current'?'selected':''}>${esc(planningTerm)} instructors</option>`,`<option value="all" ${profModalScope==='all'?'selected':''}>Current + selected historical instructors</option>`,...selectedTerms.map(term=>`<option value="term:${esc(term)}" ${profModalScope===`term:${term}`?'selected':''}>Only ${esc(term)} history</option>`)].join('');
+  const rows=pool.map(p=>{const currentTerm=Boolean(p.currentTerm),sections=(p.sections||[]).join(', '),focused=focusName===p.name,m=professorMetricsForScope(rec,p),pref=currentTerm?(p.preference||'neutral'):'neutral',prefRow=pref==='prefer'?'preference-prefer':pref==='avoid'?'preference-avoid':'';return `<tr class="${focused?'focused ':''}${prefRow}${currentTerm?'':' historical-only'}" data-professor-row="${esc(p.name)}"><td class="professor-cell"><strong>${esc(p.name)}</strong><small>${currentTerm?(sections?`Sections ${esc(sections)}`:'Offered this term'):`Not offered in ${esc(planningTerm)}`}</small><span class="prof-badge ${currentTerm?'current':'history'}">${currentTerm?'Current':'Historical'}</span><div class="prof-term-mini">${esc(professorTermMini(p))}</div><div class="prof-rmp">${rmpSummaryHtml(p.rmp)}</div></td><td class="metric-cell">${gpa(m.adjustedGpa)}</td><td class="metric-cell">${Number.isFinite(m.predictedGpa)?`${gpa(m.predictedGpa)} <span class=\"muted\">${esc(m.predictionConfidence||'')}</span>`:'—'}</td><td class="metric-cell">${gpa(m.gpa)}</td><td class="metric-cell">${pct(m.aRate)}</td><td class="metric-cell">${pct(m.dfwRate)}</td><td class="metric-cell">${m.students||0}</td><td class="metric-cell">${Number.isFinite(m.trend)?professorTrendLabel(m):'—'}</td><td class="pref-cell"><div class="pref-actions"><button data-modal-detail="${esc(p.name)}">View ↗</button><a class="button small" href="${esc(rmpUrl(p.name,p.rmp))}" target="_blank" rel="noopener noreferrer" title="Open ${esc(p.name)} on Rate My Professors">RMP ↗</a>${currentTerm?`<button class="${pref==='prefer'?'selected-prefer':''}" aria-pressed="${pref==='prefer'}" data-modal-pref="prefer" data-prof-name="${esc(p.name)}">Prefer</button><button class="${pref==='neutral'?'selected-neutral':''}" aria-pressed="${pref==='neutral'}" data-modal-pref="neutral" data-prof-name="${esc(p.name)}">Neutral</button><button class="${pref==='avoid'?'selected-avoid':''}" aria-pressed="${pref==='avoid'}" data-modal-pref="avoid" data-prof-name="${esc(p.name)}">Don't take</button>`:''}</div></td></tr>`}).join('');
+  $('profModalBody').innerHTML=`<div class="prof-modal-toolbar"><div class="field"><label for="profModalScopeSelect">Show professors from</label><select id="profModalScopeSelect">${scopeOptions}</select></div><div class="prof-modal-counts"><span class="pill good">${current.length} current</span><span class="pill">${historyOnly.length} historical</span></div></div><div class="prof-scope-note">Historical-only professors are for comparison only and never enter the current schedule optimizer.</div>${rows?`<div class="prof-table-wrap"><table class="prof-table"><thead><tr><th>Professor</th><th>Adj GPA</th><th>Forecast</th><th>GPA</th><th>A%</th><th>DFW%</th><th>Students</th><th>Trend</th><th style="text-align:right">Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="muted">No professors match this view.</div>'}`;
+  const scope=$('profModalScopeSelect');if(scope)scope.onchange=()=>{profModalScope=scope.value;renderProfessorComparison()};
+  $('profModalBody').querySelectorAll('[data-modal-pref]').forEach(b=>b.onclick=()=>setProfessorPreference(courseCode,b.dataset.profName,b.dataset.modalPref));
+  $('profModalBody').querySelectorAll('[data-modal-detail]').forEach(b=>b.onclick=()=>openProfessorDetail(courseCode,b.dataset.modalDetail));
+}
+function renderProfessorDetail(){
+  const courseCode=profModalCourse,rec=(appState?.courses||[]).find(c=>c.courseCode===courseCode),p=rec&&modalProfessor(rec,profModalFocus);if(!rec||!p)return renderProfessorComparison();
+  const allTerms=[...(p.terms||[])].reverse();
+  if(profDetailTerm!=='all'&&!allTerms.some(t=>t.term===profDetailTerm))profDetailTerm='all';
+  const chosen=profDetailTerm==='all'?allTerms:allTerms.filter(t=>t.term===profDetailTerm),metrics=aggregateProfessorTerms(chosen),selectedNames=chosen.map(t=>t.term),adj=adjustedForProfessor(rec,metrics,selectedNames),current=(rec.professors||[]).find(x=>x.name===p.name),planningTerm=rec.term||appState?.selectedTerm||'planning term';
+  $('profModalTitle').textContent=`${p.name} — ${courseCode}`;
+  const termOptions=`<option value="all" ${profDetailTerm==='all'?'selected':''}>All selected historical terms</option>`+allTerms.map(t=>`<option value="${esc(t.term)}" ${profDetailTerm===t.term?'selected':''}>${esc(t.term)}</option>`).join('');
+  const termRows=[...chosen].map(t=>`<div class="prof-history-row"><strong>${esc(t.term)}</strong><span>${gpa(t.gpa)}</span><span>${pct(t.aRate)}</span><span>${pct(t.dfwRate)}</span><span>${t.students||0}</span><span>${Number(t.A||0)+Number(t.B||0)+Number(t.C||0)+Number(t.D||0)+Number(t.F||0)}</span></div>`).join('');
+  const rmp=p.rmp||null,rmpOk=rmp?.status==='success',rmpRated=rmpHasRatings(rmp),rmpTags=rmpOk?(rmp.tags||[]).slice(0,6):[];
+  $('profModalBody').innerHTML=`<div class="prof-detail-top"><div><div class="prof-detail-name">${esc(p.name)}</div><div class="prof-detail-sub">${esc(courseCode)} • ${current?`teaching ${esc(planningTerm)}`:`historical instructor — not offered in ${esc(planningTerm)}`}</div></div><div class="prof-detail-actions"><a class="button" href="${esc(rmpUrl(p.name,p.rmp))}" target="_blank" rel="noopener noreferrer" title="Open ${esc(p.name)} on Rate My Professors">Rate My Professors ↗</a><button id="detailCompareBtn">Compare professors</button>${current?`<button data-detail-pref="prefer" class="${current.preference==='prefer'?'selected-prefer':''}">Prefer</button><button data-detail-pref="neutral" class="${current.preference==='neutral'?'selected-neutral':''}">Neutral</button><button data-detail-pref="avoid" class="${current.preference==='avoid'?'selected-avoid':''}">Don't take</button>`:''}</div></div><div class="prof-detail-filter"><div class="field"><label for="profDetailTermSelect">Filter this analysis</label><select id="profDetailTermSelect">${termOptions}</select></div><div class="prof-scope-note" style="margin:0">The curve is an estimate from letter-grade buckets. Adjusted GPA uses a 25-student course prior. The semester forecast uses enrollment-weighted linear regression across at least 3 historical terms, shrinks noisy trends toward the adjusted GPA, and is an estimate of the section's aggregate GPA — not a prediction of an individual student's grade.</div></div><div class="prof-detail-metrics"><div class="prof-detail-metric"><span>Estimated GPA</span><strong>${gpa(metrics.gpa)}</strong></div><div class="prof-detail-metric"><span>Adjusted GPA</span><strong>${gpa(adj)}</strong></div><div class="prof-detail-metric"><span>${esc(planningTerm)} forecast</span><strong>${profDetailTerm==='all'&&Number.isFinite(p.predictedGpa)?gpa(p.predictedGpa):'—'}</strong>${profDetailTerm==='all'&&Number.isFinite(p.predictionLow)&&Number.isFinite(p.predictionHigh)?`<small class="muted">${gpa(p.predictionLow)}–${gpa(p.predictionHigh)} • ${esc(p.predictionConfidence||'low')}</small>`:''}</div><div class="prof-detail-metric"><span>A rate</span><strong>${pct(metrics.aRate)}</strong></div><div class="prof-detail-metric"><span>ABC rate</span><strong>${pct(metrics.abcRate)}</strong></div><div class="prof-detail-metric"><span>DFW rate</span><strong>${pct(metrics.dfwRate)}</strong></div><div class="prof-detail-metric"><span>Students</span><strong>${metrics.students||0}</strong></div><div class="prof-detail-metric"><span>RMP rating</span><strong>${rmpRated?Number(rmp.avgRating).toFixed(1)+'/5':'—'}</strong></div><div class="prof-detail-metric"><span>RMP difficulty</span><strong>${rmpRated&&Number.isFinite(Number(rmp.avgDifficulty))&&Number(rmp.avgDifficulty)>0?Number(rmp.avgDifficulty).toFixed(1)+'/5':'—'}</strong></div><div class="prof-detail-metric"><span>Would take again</span><strong>${rmpRated&&Number.isFinite(Number(rmp.wouldTakeAgainPercent))?Math.round(Number(rmp.wouldTakeAgainPercent))+'%':'—'}</strong></div><div class="prof-detail-metric"><span>RMP ratings</span><strong>${rmpRated?Number(rmp.numRatings||0).toLocaleString():'—'}</strong></div></div>${rmpOk?`<div class="prof-scope-note" style="margin-bottom:10px"><strong>Rate My Professors:</strong> ${esc(rmp.department||'Texas Tech')}${rmp.courseMatched?' • course code matched':''}${rmpTags.length?`<div class="prof-rmp" style="margin-top:6px">${rmpTags.map(t=>`<span class="tag">${esc(t.name)} (${t.count})</span>`).join('')}</div>`:''}</div>`:''}<div class="prof-detail-charts"><div class="prof-chart"><h3>Estimated grade distribution curve</h3><svg id="profCurveSvg" class="prof-curve" viewBox="0 0 640 225" aria-label="Estimated grade distribution curve"></svg><div class="prof-detail-note">Estimate only: F≈50, D≈65, C≈75, B≈85, A≈95 because Cognos provides letter-grade counts, not individual numeric grades.</div></div><div class="prof-chart"><h3>Letter-grade mix</h3><div class="prof-donut-layout"><div id="profDonut" class="prof-donut"></div><div id="profLegend" class="prof-grade-legend"></div></div></div></div><div class="prof-history-list"><div class="prof-history-row head"><span>Term</span><span>GPA</span><span>A%</span><span>DFW%</span><span>Students</span><span>Grades</span></div>${termRows||'<div class="prof-history-row"><span>No grade history for the selected terms.</span></div>'}</div>`;
+  const sel=$('profDetailTermSelect');if(sel)sel.onchange=()=>{profDetailTerm=sel.value;renderProfessorDetail()};
+  $('detailCompareBtn').onclick=()=>{profModalMode='compare';profModalScope='current';renderProfessorComparison()};
+  $('profModalBody').querySelectorAll('[data-detail-pref]').forEach(b=>b.onclick=()=>setProfessorPreference(courseCode,p.name,b.dataset.detailPref));
+  renderProfessorCurve($('profCurveSvg'),metrics);renderProfessorDonut($('profDonut'),$('profLegend'),metrics);
+}
+function renderProfessorModal(){if(profModalMode==='detail')renderProfessorDetail();else renderProfessorComparison()}
+function openProfessorDetail(courseCode,focusName){const rec=(appState?.courses||[]).find(c=>c.courseCode===courseCode);if(!rec||!focusName)return;profModalCourse=courseCode;profModalFocus=focusName;profModalMode='detail';profDetailTerm='all';renderProfessorDetail();$('profModal').classList.remove('hidden');queueRmpEnrichment()}
+function openProfessorCompare(courseCode,focusName=''){const rec=(appState?.courses||[]).find(c=>c.courseCode===courseCode);if(!rec)return;if(profModalCourse!==courseCode)profModalScope='current';profModalCourse=courseCode;profModalFocus=focusName||'';profModalMode='compare';renderProfessorComparison();$('profModal').classList.remove('hidden');queueRmpEnrichment()}
+function openProfessorModal(courseCode,focusName=''){return focusName?openProfessorDetail(courseCode,focusName):openProfessorCompare(courseCode,'')}
+async function deleteCourse(code){try{await api("/api/v3/courses/delete",{method:"POST",body:JSON.stringify({courseCode:code})});await poll();markAnalysisDirty({auto:true})}catch(e){showError(e.message)}}
+async function retryCourse(code){try{await api("/api/v3/courses/retry",{method:"POST",body:JSON.stringify({courseCode:code,force:false})});analysis=null;analysisDirty=true;await poll();renderAnalysis()}catch(e){showError(e.message)}}
+
+function currentPrefs(){return{...prefs,noFriday:$("noFriday").checked,allowFull:$("allowFull").checked,allowWaitlist:$("allowWaitlist").checked,allowOnline:true,honorsMode:$("honorsMode").value,dayPreference:$("dayPreference").value,gradeWeight:Number($("gradeWeight").value)}}
+async function runAnalyze({auto=false,preserve=true}={}){
+  if(!auto)analysisAutoBlocked=false;
+  if(!appState?.courses?.length){analysis=null;analysisDirty=true;analysisAutoPending=false;renderAnalysis();return}
+  const courseCodes=[...visibleCourseSet()];
+  const requestedScopeKey=analysisScopeKey(courseCodes);
+  if(!courseCodes.length){analysisAutoPending=false;analysisDirty=false;renderAnalysisProgress(null);renderAnalysis();return}
+  if(!selectedCoursesReady()){analysisAutoPending=false;analysisDirty=true;renderAnalysis();return}
+  const previousSchedules=preserve&&analysis?.schedules?.length?activeSchedules():[];
+  const previousSchedule=previousSchedules[scheduleIndex]||null;
+  const previousScheduleIndex=scheduleIndex;
+  const previousWeek=currentWeekStart;
+  const requestSeq=++analysisRequestSeq;
+  try{
+    analysisRunning=true;
+    analysisAutoPending=auto;
+    setUpdateButton();
+    showError("");
+    constraintPreviewStale=true;
+    const verifiedRefresh=Boolean(auto&&verificationRefreshPending&&fullSemesterVerificationComplete());
+    analysisProgressState={status:"running",percent:3,stage:"prepare",message:auto?"Updating schedules from cached timetable data…":"Preparing cached timetable data…",processed:0,theoretical:0,verifiedRefresh};
+    renderAnalysisProgress();
+    $("calendarCourseFilter")?.classList.add("recalculating");
+    if(!preserve&&!auto){analysis=null;renderAnalysis()}
+
+    const started=await api("/api/v3/analyze/start",{method:"POST",body:JSON.stringify({prefs:currentPrefs(),courseCodes})});
+    const jobId=started.id;
+    if(requestSeq!==analysisRequestSeq)return;
+    analysisProgressState={...started,verifiedRefresh};renderAnalysisProgress();
+
+    while(requestSeq===analysisRequestSeq){
+      await sleep(90);
+      let job;
+      try{job=await api(`/api/v3/analyze/status?id=${encodeURIComponent(jobId)}`)}catch(e){
+        if(requestSeq!==analysisRequestSeq)return;
+        throw e;
+      }
+      if(requestSeq!==analysisRequestSeq)return;
+      analysisProgressState={...job,verifiedRefresh};renderAnalysisProgress();
+      if(job.status==="running")continue;
+      if(job.status==="cancelled")return;
+      if(job.status==="error")throw new Error(job.error||job.message||"Schedule analysis failed.");
+      if(job.status==="complete"){
+        analysis=hydrateCompactAnalysis(job.result||{});
+        constraintPreviewStale=false;
+        analysisCacheByScope.set(requestedScopeKey,analysis);
+        while(analysisCacheByScope.size>12)analysisCacheByScope.delete(analysisCacheByScope.keys().next().value);
+        analysisVersion++;
+        activeScheduleCacheKey="";activeScheduleCacheList=[];schedulePickerBuildKey="";
+        prunePins();
+        analysisDirty=false;
+        analysisAutoPending=false;
+        analysisAutoBlocked=false;
+        const refreshedSchedules=activeSchedules();
+        const preservedIndex=previousSchedule?.id?refreshedSchedules.findIndex(item=>item.id===previousSchedule.id):-1;
+        scheduleIndex=preservedIndex>=0?preservedIndex:Math.min(previousScheduleIndex,Math.max(0,refreshedSchedules.length-1));
+        currentWeekStart=previousWeek;
+        analysisProgressState={...job,status:"complete",percent:100,stage:"complete",message:auto?"Calendar updated from cached timetable data.":"Schedule analysis complete.",verifiedRefresh};
+        renderAnalysisProgress();
+        if(verifiedRefresh)verificationRefreshPending=false;
+        renderAnalysis();
+        renderProfessorPreferences();
+        return;
+      }
+    }
+  }catch(e){
+    if(requestSeq!==analysisRequestSeq)return;
+    analysisAutoPending=false;
+    analysisDirty=true;
+    if(auto)analysisAutoBlocked=true;
+    showError(e.message);
+    renderAnalysis();
+  }finally{
+    if(requestSeq===analysisRequestSeq){analysisRunning=false;analysisAutoPending=false;$("calendarCourseFilter")?.classList.remove("recalculating");setUpdateButton()}
+  }
+}
+function queueAutoAnalyze(delay=55){
+  clearTimeout(analysisAutoTimer);
+  analysisRequestSeq++; // Immediately invalidate any older in-flight result.
+  analysisRunning=false;
+  if(useCachedScopeIfAvailable()){setUpdateButton();return}
+  analysisAutoPending=true;
+  const verifiedRefresh=Boolean(verificationRefreshPending&&fullSemesterVerificationComplete());
+  analysisProgressState={status:"running",percent:2,stage:"prepare",message:"Updating schedules from the local timetable cache…",processed:0,theoretical:0,verifiedRefresh};
+  renderAnalysisProgress();
+  $("calendarCourseFilter")?.classList.add("recalculating");
+  if(analysis?.schedules?.length)renderSchedule();
+  analysisAutoTimer=setTimeout(()=>runAnalyze({auto:true,preserve:true}),delay);
+}
+function autoAnalyzeIfReady(delay=220){
+  if(analysisAutoBlocked||!analysisDirty||analysisRunning||analysisAutoPending)return false;
+  if(!appState?.courses?.length||!visibleCourseCount()||!selectedCoursesReady())return false;
+  const honorsImpossible=Boolean(honorsRuleBlocker());
+  const knownImpossible=honorsImpossible||(!constraintPreviewStale&&analysis?.constraintGrid?.complete!==false&&constraintGridCount()===0);
+  if(knownImpossible){setUpdateButton();return false}
+  queueAutoAnalyze(delay);
+  return true;
+}
+
+function buttonChoices(target,items,current,key,labelFn){
+  const el=$(target);
+  el.innerHTML=items.map(item=>{
+    const value=item.value===null?"any":String(item.value),selected=(current===null&&item.value===null)||Number(current)===Number(item.value);
+    const hasCount=Number.isFinite(item.count),zero=hasCount&&item.count===0&&!item.approx;
+    return `<button class="choice ${selected?"selected":""} ${zero?"zero":""}" data-pref="${key}" data-value="${value}" ${zero&&!selected?"disabled":""}>${labelFn(item.value)}${hasCount?` <span class="muted">(${item.approx?'≥':''}${Number(item.count).toLocaleString()})</span>`:""}</button>`
+  }).join("");
+  el.querySelectorAll("[data-pref]").forEach(b=>b.onclick=()=>{
+    const key=b.dataset.pref,raw=b.dataset.value;
+    const next=raw==="any"?null:Number(raw);
+    const currentValue=prefs[key];
+    // These button groups behave like a single-select toggle: choosing a new
+    // value replaces the old one, while clicking the selected value again
+    // clears that constraint.
+    prefs[key]=(next!==null&&Number(currentValue)===next)?null:next;
+    scheduleIndex=0;
+    markAnalysisDirty({clear:false,constraintStale:false,auto:true});
+  })
+}
+function renderChoices(){
+  // Keep the schedule controls aligned with the full analyzer calendar window.
+  // "Any" is explicit so clearing a time rule is visible rather than a hidden toggle.
+  const e=[{value:null,count:null}];for(let m=420;m<=720;m+=30)e.push({value:m,count:null});
+  const l=[{value:null,count:null}];for(let m=840;m<=1320;m+=30)l.push({value:m,count:null});
+  const g=[null,30,60,90,120,180].map(value=>({value,count:null}));
+  buttonChoices("earliestChoices",constraintFacetItems("earliestStart",e),prefs.earliestStart,"earliestStart",v=>v===null?"Any start":`${fmtTime(v)} or later`);
+  buttonChoices("latestChoices",constraintFacetItems("latestEnd",l),prefs.latestEnd,"latestEnd",v=>v===null?"Any end":`By ${fmtTime(v)}`);
+  buttonChoices("gapChoices",constraintFacetItems("maxGap",g),prefs.maxGap,"maxGap",v=>v===null?"Any gap":`≤ ${v} min`);
+  renderHardFilterPreview();
+}
+function renderAnalysis(){
+  renderChoices();
+  setUpdateButton();
+  const subsetNotice=$("scheduleSubsetNotice");
+  if(subsetNotice){subsetNotice.className="schedule-subset-note hidden";subsetNotice.textContent=""}
+  const a=analysis;
+  $("baseCount").textContent=a?.totalBase??0;
+  $("matchCount").textContent=a?.totalMatching??0;
+  const selected=selectedCourseRecords(),selectedReady=selected.filter(c=>Number(c.optionCount||0)>0).length;
+  $("readyCount").textContent=`${a?.readyCourses??selectedReady}/${a?.activeCourses??selected.length}`;
+  $("bestScore").textContent=a?.schedules?.length?Math.round(a.schedules[0].score):"—";
+  const notice=$("analysisNotice"),area=$("resultArea");
+  renderCalendarCourseFilter();
+  if(!appState?.courses?.length){
+    notice.textContent="Add courses and wait for their section data to finish loading.";
+    notice.className="conflict";area.classList.add("hidden");return
+  }
+  if(!selected.length){
+    notice.textContent="No courses are checked for the calendar. Check one course to browse it by itself, then add other courses to test compatible combinations.";
+    notice.className="conflict";area.classList.add("hidden");return
+  }
+  if(!selectedCoursesReady()){
+    notice.textContent=`Loading selected timetables… ${selectedReady} of ${selected.length} checked courses have fast VSB timetable data. Grade history can continue loading after the calendar becomes usable.`;
+    notice.className="conflict";area.classList.add("hidden");return
+  }
+  if(analysisDirty||!a){
+    const preview=constraintGridCount(),complete=a?.constraintGrid?.complete!==false,allVerified=selected.length>0&&selected.every(c=>c.verification?.status==='complete');
+    notice.textContent=complete&&preview===0?"The current time/gap/Friday combination is already known to produce zero schedules. Adjust the highlighted filters above.":preview!==null?`${complete?'': 'At least '}${preview.toLocaleString()} schedules are available under the pending time/gap/Friday filters. The ranked calendar is updating locally from loaded timetable data.`:"Fast timetable data is ready. The first ranked schedules will generate automatically while professor history can continue loading.";
+    notice.className=complete&&preview===0?"conflict":allVerified?"good-note":"info-note";
+    if(a?.schedules?.length){area.classList.remove("hidden");renderSchedule();return}
+    area.classList.add("hidden");return
+  }
+  if(!a?.totalBase){
+    const rec=(appState?.courses||[]).find(c=>c.courseCode===a?.impossibleCourse);
+    let reason="has no usable sections under the current section rules.";
+    if(prefs.honorsMode==="only")reason="has no honors lecture option (Lec H###) under the current rules.";
+    else if(prefs.honorsMode==="exclude")reason="has no regular lecture option after honors sections were excluded.";
+    else if(rec?.preferences?.delivery==="online")reason="has no online-only timetable options for the selected term.";
+    else if(rec?.preferences?.delivery==="in-person")reason="has no in-person-only timetable options for the selected term.";
+    else if(Object.values(rec?.preferences?.professors||{}).includes("avoid"))reason="has no remaining timetable options after the professor-avoid rules.";
+    notice.textContent=a?.impossibleCourse?`${a.impossibleCourse} ${reason}`:"The checked courses cannot form a conflict-free schedule under the current section rules. Uncheck one course to isolate the conflict, or change the filters above.";
+    notice.className="conflict";area.classList.add("hidden");return
+  }
+  if(!a?.totalMatching){
+    notice.innerHTML='No schedules satisfy the current hard constraints. <strong>Choose another enabled time/gap option or click Relax hard constraints; the results will refresh automatically.</strong>';
+    notice.className="conflict";area.classList.add("hidden");return
+  }
+  notice.textContent=a.truncated?`Showing ranked results from the first ${a.totalBase.toLocaleString()} conflict-free combinations. The combination search hit its safety limit.`:`${a.totalMatching.toLocaleString()} schedules satisfy your hard constraints.`;
+  notice.className="good-note";area.classList.remove("hidden");
+  scheduleIndex=Math.min(scheduleIndex,a.schedules.length-1);
+  renderSchedule()
+}
+const COURSE_BASE_COLORS=[
+  '#b9dcff', // blue
+  '#ffc8c3', // coral
+  '#c9edbd', // green
+  '#f2c2e0', // pink
+  '#d8cdf8', // violet
+  '#ffe59b', // yellow
+  '#bce9e1', // teal
+  '#ffd0a3', // orange
+  '#c8d5ff', // indigo
+  '#e5c7b5', // tan
+  '#bfe8f4', // cyan
+  '#e8c4f5', // orchid
+  '#dcecae', // lime
+  '#ffc2d0', // rose
+  '#c7ddd0', // sage
+  '#f0d2aa'  // sand
+];
+function ensureCourseUiState(){
+  const codes=(appState?.courses||[]).map(c=>c.courseCode).filter(Boolean);
+  for(const code of codes){
+    if(!(code in calendarCourseVisibility))calendarCourseVisibility[code]=true;
+    if(!(code in courseColorAssignments))courseColorAssignments[code]=nextCourseColorIndex++;
+  }
+  for(const code of Object.keys(calendarCourseVisibility))if(!codes.includes(code))delete calendarCourseVisibility[code];
+}
+function courseColor(courseCode){
+  const code=String(courseCode||'');
+  if(!(code in courseColorAssignments))courseColorAssignments[code]=nextCourseColorIndex++;
+  const i=courseColorAssignments[code];
+  if(i<COURSE_BASE_COLORS.length)return COURSE_BASE_COLORS[i];
+  // After the high-contrast base palette is exhausted, generate distinct shades
+  // with a golden-angle hue step so adjacent added courses remain visually different.
+  const j=i-COURSE_BASE_COLORS.length,hue=(j*137.508)%360,band=Math.floor(j/12)%3,light=[84,78,90][band];
+  return `hsl(${hue.toFixed(1)} 64% ${light}%)`;
+}
+function visibleCourseSet(){
+  ensureCourseUiState();
+  return new Set((appState?.courses||[]).map(c=>c.courseCode).filter(code=>calendarCourseVisibility[code]!==false));
+}
+function visibleCourseCount(){return visibleCourseSet().size}
+function renderCalendarCourseFilter(){
+  ensureCourseUiState();
+  const host=$('calendarCourseFilter'),courses=appState?.courses||[];
+  if(!host)return;
+  if(!courses.length){host.innerHTML='<div class="muted">Add courses to control the calendar.</div>';return}
+  const visible=visibleCourseSet();
+  host.innerHTML=`<div class="calendar-course-filter-head"><div><strong>Calendar courses</strong><div class="help">Checked courses are the active schedule set. Uncheck a course to remove it from the calendar without deleting its cached data; recheck it to test compatibility again.</div></div><div class="calendar-course-filter-actions"><button data-calendar-all>All</button><button data-calendar-clear>Clear</button></div></div><div class="calendar-course-chips">${courses.map(c=>`<label class="calendar-course-chip ${visible.has(c.courseCode)?'':'off'}" style="--course-color:${courseColor(c.courseCode)}"><input type="checkbox" data-calendar-course="${esc(c.courseCode)}" ${visible.has(c.courseCode)?'checked':''}><span class="calendar-course-swatch"></span><span>${esc(c.courseCode)}</span>${pinnedCourseOptions[c.courseCode]?'<span title="This course has a pinned timetable option">📌</span>':''}</label>`).join('')}</div>`;
+  host.querySelectorAll('[data-calendar-course]').forEach(box=>box.onchange=()=>{
+    const code=box.dataset.calendarCourse;
+    calendarCourseVisibility[code]=box.checked;
+    if(!box.checked)delete pinnedCourseOptions[code];
+    const chip=box.closest('.calendar-course-chip');if(chip)chip.classList.toggle('off',!box.checked);
+    scheduleIndex=0;currentWeekStart='';analysisDirty=false;constraintPreviewStale=true;renderHardFilterPreview();
+    // Optimistic paint: hiding a course is purely local, so update the calendar in the
+    // same frame. The worker recomputes the true subset in the background without
+    // blocking checkbox interaction or replacing the DOM element the user clicked.
+    if(analysis?.schedules?.length)renderSchedule();else renderAnalysis();
+    if(visibleCourseCount()&&selectedCoursesReady())queueAutoAnalyze();
+    else{clearTimeout(analysisAutoTimer);analysisRequestSeq++;analysisAutoPending=false;analysisRunning=false;renderAnalysisProgress(null);renderAnalysis();setUpdateButton()}
+  });
+  host.querySelector('[data-calendar-all]').onclick=()=>{
+    for(const c of courses)calendarCourseVisibility[c.courseCode]=true;
+    scheduleIndex=0;currentWeekStart='';analysisDirty=false;constraintPreviewStale=true;renderHardFilterPreview();renderCalendarCourseFilter();
+    if(analysis?.schedules?.length)renderSchedule();else renderAnalysis();
+    if(selectedCoursesReady())queueAutoAnalyze();
+  };
+  host.querySelector('[data-calendar-clear]').onclick=()=>{
+    clearTimeout(analysisAutoTimer);analysisRequestSeq++;
+    for(const c of courses){calendarCourseVisibility[c.courseCode]=false;delete pinnedCourseOptions[c.courseCode]}
+    scheduleIndex=0;currentWeekStart='';analysisAutoPending=false;analysisRunning=false;analysisDirty=false;constraintPreviewStale=true;renderHardFilterPreview();renderAnalysisProgress(null);renderCalendarCourseFilter();renderAnalysis();setUpdateButton();
+  };
+}
+function scheduleVisibleSignature(s,visible){
+  return [...visible].sort().map(code=>{const c=(s.courses||[]).find(x=>x.courseCode===code);return `${code}:${c?.optionKey||'missing'}`}).join('|');
+}
+function activeSchedules(){
+  if(!analysis)return [];
+  const all=analysis.schedules||[],visible=visibleCourseSet();
+  if(!visible.size)return [];
+  const pins=Object.entries(pinnedCourseOptions).filter(([code])=>visible.has(code)).sort((a,b)=>a[0].localeCompare(b[0]));
+  const key=`${analysisVersion}|${[...visible].sort().join(',')}|${pins.map(([c,k])=>`${c}:${k}`).join(',')}`;
+  if(key===activeScheduleCacheKey)return activeScheduleCacheList;
+  const filtered=pins.length?all.filter(s=>pins.every(([code,pinKey])=>(s.courses||[]).some(c=>c.courseCode===code&&c.optionKey===pinKey))):all;
+  // If some courses are hidden, multiple full schedules can look identical in the
+  // calendar. Keep the highest-ranked representative for each visible combination.
+  const seen=new Set(),out=[];
+  for(const s of filtered){const signature=scheduleVisibleSignature(s,visible);if(seen.has(signature))continue;seen.add(signature);out.push(s)}
+  activeScheduleCacheKey=key;activeScheduleCacheList=out;
+  return out;
+}
+function pinCount(){const visible=visibleCourseSet();return Object.entries(pinnedCourseOptions).filter(([code])=>visible.has(code)).length}
+function prunePins(){
+  // A pin is a user's explicit lock. Keep it even when the current combination
+  // cannot satisfy it so the UI can report the incompatibility instead of
+  // silently discarding the lock. Only remove pins whose course/option no longer
+  // exists in the loaded TTU data (for example after a term change).
+  for(const [code,key] of Object.entries(pinnedCourseOptions)){
+    const rec=(appState?.courses||[]).find(c=>c.courseCode===code);
+    if(!rec||!(rec.optionKeys||[]).includes(key))delete pinnedCourseOptions[code];
+  }
+}
+function toggleCoursePin(courseCode,optionKey){
+  if(!courseCode||!optionKey||!analysis)return;
+  const before=activeSchedules()[scheduleIndex]||analysis.schedules[0];
+  if(pinnedCourseOptions[courseCode]===optionKey)delete pinnedCourseOptions[courseCode];
+  else pinnedCourseOptions[courseCode]=optionKey;
+  activeScheduleCacheKey="";schedulePickerBuildKey="";
+  const list=activeSchedules();
+  const keep=before?list.findIndex(x=>x.id===before.id):-1;
+  scheduleIndex=keep>=0?keep:0;
+  currentWeekStart='';
+  renderSchedule();
+}
+function schedulePreviewLabel(s,index){
+  const visible=visibleCourseSet(),shown=(s.courses||[]).filter(c=>visible.has(c.courseCode));
+  const profs=shown.map(c=>{const last=String(c.professor||'TBA').split(',')[0];return `${c.courseCode.replace(' ','')}:${last}`});
+  const brief=profs.slice(0,3).join(' · ')+(profs.length>3?` · +${profs.length-3}`:'');
+  const times=shown.flatMap(c=>recurringEventsForCourse(c)).filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end));
+  const earliest=times.length?Math.min(...times.map(x=>x.start)):null,latest=times.length?Math.max(...times.map(x=>x.end)):null;
+  const span=Number.isFinite(earliest)&&Number.isFinite(latest)?`${fmtTime(earliest).replace(':00','')}-${fmtTime(latest).replace(':00','')}`:'no fixed time';
+  return `#${index+1} · Fit ${Math.round(s.score)} · ${span} · ${brief||'calendar preview'}`;
+}
+function renderSchedulePicker(){
+  const picker=$("schedulePicker"),list=activeSchedules();if(!list.length){picker.innerHTML="";picker.disabled=true;schedulePickerBuildKey="";return}
+  picker.disabled=false;
+  const buildKey=`${activeScheduleCacheKey}|${list.length}`;
+  if(buildKey!==schedulePickerBuildKey){
+    picker.innerHTML=list.map((s,i)=>`<option value="${i}">${esc(schedulePreviewLabel(s,i))}</option>`).join("");
+    schedulePickerBuildKey=buildKey;
+  }
+  picker.value=String(Math.max(0,Math.min(scheduleIndex,list.length-1)));
+}
+function isoAddDays(iso,days){const d=new Date(`${iso}T00:00:00Z`);d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10)}
+function sundayForDate(iso){const d=new Date(`${iso}T00:00:00Z`);d.setUTCDate(d.getUTCDate()-d.getUTCDay());return d.toISOString().slice(0,10)}
+function scheduleWeeks(s){
+  const set=new Set();
+  for(const c of s.courses||[]){for(const w of c.weeks||[])if(w.weekStart)set.add(w.weekStart);for(const o of c.occurrences||[])if(o.date)set.add(sundayForDate(o.date))}
+  const sorted=[...set].sort();
+  if(!sorted.length)return [];
+  const out=[];let cur=sorted[0],last=sorted[sorted.length-1],guard=0;
+  while(cur<=last&&guard++<30){out.push(cur);cur=isoAddDays(cur,7)}
+  return out;
+}
+function fmtDateShort(iso){const d=new Date(`${iso}T00:00:00Z`);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',timeZone:'UTC'})}
+function fmtWeek(weekStart){return `${fmtDateShort(weekStart)} – ${fmtDateShort(isoAddDays(weekStart,6))}`}
+function dayCodeForISO(iso){return ['U','M','T','W','R','F','S'][new Date(`${iso}T00:00:00Z`).getUTCDay()]}
+function recurringEventsForCourse(c){return (c.components||[]).flatMap(comp=>(comp.meetings||[]).flatMap(m=>(m.days||[]).map(day=>({day,start:toMin(m.start),end:toMin(m.end),course:c.courseCode,optionKey:c.optionKey,section:comp.section,kind:comp.section||'Meeting',special:false,linkedBundle:Boolean(c.linkedBundle)})))).filter(m=>Number.isFinite(m.start)&&Number.isFinite(m.end))}
+function detailedEventsForCourse(c,weekStart){
+  const monday=isoAddDays(weekStart,1),friday=isoAddDays(weekStart,5);
+  return (c.occurrences||[]).filter(o=>o.date>=monday&&o.date<=friday).map(o=>({date:o.date,day:o.day||dayCodeForISO(o.date),start:toMin(o.start),end:toMin(o.end),course:c.courseCode,optionKey:c.optionKey,section:o.section||'',kind:o.kind||'Meeting',special:Boolean(o.special),linkedBundle:Boolean(c.linkedBundle)})).filter(m=>Number.isFinite(m.start)&&Number.isFinite(m.end));
+}
+function renderSchedule(){
+  if(!analysis?.schedules?.length)return;
+  prunePins();ensureCourseUiState();
+  $('resultArea').classList.remove('hidden');
+  const visible=visibleCourseSet(),totalCourses=(appState?.courses||[]).length,list=activeSchedules(),notice=$('scheduleSubsetNotice');
+  notice.className='schedule-subset-note hidden';notice.textContent='';
+  if(!visible.size){
+    notice.textContent='No calendar courses are checked. Check one course to browse its available timetable options, then add more courses when you are ready.';notice.className='schedule-subset-note warn';
+    $('scheduleIndex').textContent='Calendar preview';$('scheduleMeta').textContent='0 courses shown';$('prevSchedule').disabled=true;$('nextSchedule').disabled=true;renderSchedulePicker();renderCalendar({courses:[]});$('sectionCards').innerHTML='<div class="muted">No courses selected for the calendar.</div>';renderRegistrationBar(analysis.schedules[0]);return
+  }
+  if(!list.length){
+    const pending=analysisAutoPending||analysisRunning;
+    const visibleRecords=(appState?.courses||[]).filter(c=>visible.has(c.courseCode));
+    const allVerified=visibleRecords.length>0&&visibleRecords.every(c=>c.verification?.status==='complete');
+    notice.textContent=pending?(allVerified?'All checked courses are fully verified. Refreshing compatibility locally from cached timetable data…':'All checked course timetables are loaded. Recalculating compatibility locally while any remaining full-semester verification continues in the background…'):'This checked-course combination is impossible with the current filters and pinned class times. Unpin a section, relax a hard filter, or hide one of the conflicting courses.';notice.className=`schedule-subset-note ${pending?(allVerified?'ready':''):'bad'}`;
+    $('scheduleIndex').textContent=pending?'Updating calendar…':'No compatible combination';$('scheduleMeta').textContent=`${visible.size} of ${totalCourses} courses checked`; $('prevSchedule').disabled=true;$('nextSchedule').disabled=true;renderSchedulePicker();renderCalendar({courses:[]});$('sectionCards').innerHTML=`<div class="muted">${pending?'Finding compatible cached sections…':'No compatible checked-course combination.'}</div>`;renderRegistrationBar(analysis.schedules[0]);return
+  }
+  scheduleIndex=Math.min(scheduleIndex,list.length-1);
+  const s=list[scheduleIndex],pins=pinCount(),visibleRecords=(appState?.courses||[]).filter(c=>visible.has(c.courseCode)),gradePending=visibleRecords.filter(c=>['loading-grades','queued'].includes(c.status)&&Number(c.optionCount||0)>0).length;
+  if(analysisAutoPending||analysisRunning){
+    const allVerified=visibleRecords.length>0&&visibleRecords.every(c=>c.verification?.status==='complete');
+    notice.textContent=allVerified?`All ${visible.size} checked course${visible.size===1?' is':'s are'} fully verified. Refreshing the ranked calendar locally from cached timetable data…`:`All ${visible.size} checked course timetable${visible.size===1?' is':'s are'} loaded. Re-ranking locally from cached timetable data${gradePending?` while TTU professor history finishes for ${gradePending} course${gradePending===1?'':'s'}`:' while semester verification continues in the background'}.`;
+    notice.className=`schedule-subset-note ${allVerified?'ready':''}`
+  }
+  else if(gradePending){notice.textContent=`Fast timetables are ready for all checked courses. TTU professor history is still loading for ${gradePending} course${gradePending===1?'':'s'}; the calendar is usable now and professor ranking will refresh automatically${visible.size<totalCourses?` while showing your selected ${visible.size}/${totalCourses} course subset`:''}.`;notice.className='schedule-subset-note'}
+  else if(visible.size<totalCourses){notice.textContent=`Showing ${visible.size} of ${totalCourses} loaded courses by your calendar selection. All ${totalCourses} remain loaded/cached, so rechecking them is instant${pins?` while ${pins} visible pin${pins===1?'':'s'} remain locked`:''}.`;notice.className='schedule-subset-note'}
+  else if(pins){notice.textContent=`${pins} pinned course option${pins===1?' is':'s are'} locking the timetable. Click a pinned calendar block or course card to unlock it.`;notice.className='schedule-subset-note'}
+  $('scheduleIndex').textContent=`Schedule ${scheduleIndex+1} of ${list.length}${pins?` • ${pins} pinned`:visible.size===totalCourses&&analysis.schedules.length<analysis.totalMatching?` (top ${analysis.schedules.length})`:''}`;
+  $('scheduleMeta').textContent=`Fit ${s.score}/100 • ${s.professorScoreAvailable?`Professor ${s.gradeScore}/100`:'Professor data —'} • Convenience ${s.convenienceScore}/100 • ${s.daysOnCampus} campus day${s.daysOnCampus===1?'':'s'}${visible.size<totalCourses?` • showing ${visible.size}/${totalCourses} courses`:''}`;
+  $('prevSchedule').disabled=scheduleIndex<=0;$('nextSchedule').disabled=scheduleIndex>=list.length-1;
+  renderSchedulePicker();renderCalendar(s);renderSectionCards(s);renderRegistrationBar(s)
+}
+function renderCalendar(s){
+  const body=$('calendarBody'),head=$('calendarHead'),visible=visibleCourseSet(),shownCourses=(s.courses||[]).filter(c=>visible.has(c.courseCode)),view={...s,courses:shownCourses},weeks=scheduleWeeks(view);
+  if(weeks.length){
+    if(!currentWeekStart||!weeks.includes(currentWeekStart)){
+      const eventWeeks=[...new Set(shownCourses.flatMap(c=>(c.occurrences||[]).map(o=>o.date?sundayForDate(o.date):'')).filter(Boolean))].sort();
+      currentWeekStart=eventWeeks[0]||weeks[0];
+    }
+  }else currentWeekStart='';
+  const mergeWeekEvents=(base,dated)=>{
+    const out=[],seen=new Set();
+    for(const event of [...base,...dated]){
+      const key=`${event.day}|${event.start}|${event.end}|${event.course}`;
+      if(seen.has(key))continue;seen.add(key);out.push(event)
+    }
+    return out
+  };
+  let all=[];
+  if(currentWeekStart){
+    all=shownCourses.flatMap(c=>{
+      const dated=detailedEventsForCourse(c,currentWeekStart);
+      if(c.occurrenceCoverageComplete===true)return dated;
+      // Fast VSB legend reads retain the official recurring schedule immediately.
+      // Any explicit dated meetings we captured are layered on top so the HTML
+      // timetable never drops a discussion/lab/exam just because the full weekly
+      // verification path was not required for that simple section.
+      return mergeWeekEvents(recurringEventsForCourse(c),dated)
+    });
+  }else all=shownCourses.flatMap(recurringEventsForCourse);
+
+  const days=['M','T','W','R','F'],start=420,end=1320,height=900,scale=height/(end-start);
+  const dayNames=['Mon','Tue','Wed','Thu','Fri'];
+  head.innerHTML='<div>Time</div>'+dayNames.map((name,i)=>`<div>${name}${currentWeekStart?`<small>${fmtDateShort(isoAddDays(currentWeekStart,i+1))}</small>`:''}</div>`).join('');
+  let html='<div class="time-axis">';
+  for(let t=start;t<=end;t+=60){const cls=t===start?' first':t===end?' last':'';html+=`<div class="time-label${cls}" style="top:${(t-start)*scale}px">${fmtTime(t).replace(':00','')}</div>`}html+='</div>';
+  for(const d of days){
+    html+=`<div class="day-col" style="background-size:100% ${30*scale}px">`;
+    for(const m of all.filter(x=>x.day===d)){
+      const clippedStart=Math.max(start,m.start),clippedEnd=Math.min(end,m.end);if(clippedEnd<=clippedStart)continue;
+      const top=(clippedStart-start)*scale,h=Math.max(22,(clippedEnd-clippedStart)*scale),pinned=pinnedCourseOptions[m.course]===m.optionKey;
+      const extra=m.special?' • special date':'';
+      const pinTarget=m.linkedBundle?'linked lecture/lab/discussion bundle':'course section';
+      html+=`<div class="event ${m.special?'special ':''}${pinned?'pinned':''}" data-pin-course="${esc(m.course)}" data-pin-option="${esc(m.optionKey||'')}" style="top:${top}px;height:${h}px;--course-color:${courseColor(m.course)}" title="${esc(`${m.course} ${m.kind||m.section||''}${extra} • click to ${pinned?'unpin':'pin'} this ${pinTarget}`)}"><strong>${esc(m.course)}</strong><small>${esc(m.kind||m.section||'Meeting')}${m.special?' • ⚠ special date':''}${m.linkedBundle?' • 🔒':''}</small>${pinned?'<span class="pin-mark">📌</span>':''}</div>`
+    }
+    html+='</div>'
+  }
+  body.innerHTML=html;
+  body.querySelectorAll('[data-pin-course]').forEach(el=>el.onclick=()=>toggleCoursePin(el.dataset.pinCourse,el.dataset.pinOption));
+  const weekNav=$('weekNav'),slider=$('weekSlider');
+  weekNav.classList.toggle('hidden',!weeks.length);
+  if(weeks.length){
+    const idx=Math.max(0,weeks.indexOf(currentWeekStart));
+    $('weekLabel').textContent=`${fmtWeek(currentWeekStart)} • week ${idx+1} of ${weeks.length}`;
+    $('prevWeek').disabled=idx<=0;$('nextWeek').disabled=idx>=weeks.length-1;
+    slider.min=0;slider.max=Math.max(0,weeks.length-1);slider.value=idx;slider.disabled=weeks.length<=1;
+    const monthMarks=[];let last='';
+    weeks.forEach((w,i)=>{const d=new Date(`${isoAddDays(w,1)}T00:00:00Z`),label=d.toLocaleDateString(undefined,{month:'short',timeZone:'UTC'});if(label!==last){monthMarks.push(`<span class="week-month-label" style="left:${weeks.length<=1?50:(i/(weeks.length-1))*100}%">${label}</span>`);last=label}});
+    $('weekMonths').innerHTML=monthMarks.join('');
+    const periodRows=shownCourses.map(c=>{
+      const first=c.sessionStart?sundayForDate(c.sessionStart):weeks[0],lastWeek=c.sessionEnd?sundayForDate(c.sessionEnd):weeks[weeks.length-1];
+      let a=Math.max(0,weeks.indexOf(first)),b=weeks.indexOf(lastWeek);if(b<0)b=weeks.length-1;if(a<0)a=0;if(b<a)b=a;
+      const left=(a/weeks.length)*100,width=((b-a+1)/weeks.length)*100;
+      return `<div class="week-period-row" title="${esc(c.courseCode)} ${esc(c.sessionStart||'')}–${esc(c.sessionEnd||'')}"><div class="week-period-bar" style="left:${left}%;width:${width}%;--course-color:${courseColor(c.courseCode)}">${esc(c.courseCode)}</div></div>`
+    });
+    $('weekPeriods').innerHTML=periodRows.join('');
+  }else{$('weekMonths').innerHTML='';$('weekPeriods').innerHTML=''}
+}
+function toMin(v){if(typeof v==='number')return v;const m=String(v||'').toUpperCase().match(/(\d{1,2}):(\d{2})\s*(AM|PM)/);if(!m)return NaN;let h=Number(m[1])%12;if(m[3]==='PM')h+=12;return h*60+Number(m[2])}
+function renderSectionCards(s){
+  const visible=visibleCourseSet(),shown=(s.courses||[]).filter(c=>visible.has(c.courseCode));
+  $('sectionCards').innerHTML=shown.map(c=>{
+    const comps=c.components||[],crns=comps.map(x=>x.crn).filter(Boolean).join(', ')||'—',prof=c.professor||'TBA',
+      times=[...new Set(comps.flatMap(x=>(x.meetings||[]).map(m=>`${(m.days||[]).join('')} ${m.start}–${m.end}`)))].join(' • ')||'Online / no scheduled meeting time',
+      statuses=[...new Set(comps.map(x=>x.status).filter(Boolean))].join(','),gr=c.grade,sig=c.rankingSignal||{},priority=c.preferences?.professorPriority||3,
+      delivery=c.preferences?.delivery||'either',special=(c.occurrences||[]).filter(o=>o.special).length,linked=Boolean(c.linkedBundle),
+      hasFixed=comps.some(x=>(x.meetings||[]).length),exact=c.occurrenceCoverageComplete===true,detailSource=c.timetableDetailSource||'';
+    let gradeHtml='';
+    if(gr){
+      const trend=Number.isFinite(gr.trend)?(gr.trend>0.03?`↑ ${gr.trend.toFixed(2)}`:gr.trend<-0.03?`↓ ${Math.abs(gr.trend).toFixed(2)}`:'Stable'):'No trend';
+      const forecast=Number.isFinite(gr.predictedGpa)?`<span class="pill good" title="Enrollment-weighted linear-regression estimate for ${esc(appState?.selectedTerm||'the planning term')}; not an individual-grade prediction">Forecast ${gpa(gr.predictedGpa)} • ${esc(gr.predictionConfidence||'low')}</span>`:'';
+      gradeHtml=`<span class="pill good">TTU grade ranking</span><span class="pill good">Adj GPA ${gpa(gr.adjustedGpa)}</span>${forecast}<span class="pill">DFW ${pct(gr.dfwRate)}</span><span class="pill">${gr.students} students</span><span class="pill ${Number.isFinite(gr.trend)&&gr.trend<-.03?'bad':''}">${trend}</span>`;
+    }else if(sig.source==='rmp'&&Number.isFinite(sig.rmpRating)){
+      gradeHtml=`<span class="pill warn">RMP fallback ${Number(sig.rmpRating).toFixed(1)}/5</span><span class="pill">${Number(sig.rmpRatings||0).toLocaleString()} ratings</span><span class="pill">No TTU grade history</span>`;
+    }else if(sig.source==='preference'){
+      gradeHtml='<span class="pill warn">No TTU/RMP data</span><span class="pill">Your Prefer choice affects ranking</span>';
+    }else{
+      gradeHtml='<span class="pill warn">No professor data</span><span class="pill">Schedule convenience decides</span>';
+    }
+    const bundleRows=linked?`<div class="bundle-components">${comps.map(comp=>{const ct=[...new Set((comp.meetings||[]).map(m=>`${(m.days||[]).join('')} ${m.start}–${m.end}`))].filter(Boolean).join(' • ')||'No fixed time';return `<div class="bundle-component"><strong>${esc(comp.section||'Class')}</strong><span class="bundle-crn">CRN ${esc(comp.crn||'—')}</span><span class="bundle-instructor">${esc(comp.instructor||'TBA')}${comp.credits===0?' • 0 credit':''}${comp.online?' • online meeting':''}</span><span class="bundle-time">${esc(ct)}</span></div>`}).join('')}</div>`:'';
+    const altNote=Number(c.equivalentChoiceCount)>1?`<div class="same-time-note">${Number(c.equivalentChoiceCount)} same-time section/professor choices exist for this timetable slot. Each choice keeps its own linked CRNs; use professor preferences or Compare professors to choose.</div>`:'';
+    const profNames=prof==='TBA'?[]:prof.split(' / ').map(x=>x.trim()).filter(Boolean),courseRec=(appState?.courses||[]).find(x=>x.courseCode===c.courseCode);
+    const actionTop=profNames.map(name=>{const profRec=[...(courseRec?.professors||[]),...(courseRec?.historicalProfessors||[])].find(x=>x.name===name);return `<button class="small" data-result-prof="${esc(c.courseCode)}" data-result-name="${esc(name)}" title="Open ${esc(name)} individual grade analysis" aria-label="Open ${esc(name)} individual grade analysis">Profile ↗</button><a class="button small" href="${esc(rmpUrl(name,profRec?.rmp))}" target="_blank" rel="noopener noreferrer" title="Open ${esc(name)} on Rate My Professors">RMP ↗</a>`}).join('');
+    const compareButton=Number(c.equivalentChoiceCount)>1?`<button class="small" data-result-compare="${esc(c.courseCode)}" title="Compare same-time professor choices">Compare</button>`:'';
+    const actionHtml=`<div class="actions">${actionTop}${compareButton}</div>`,isPinned=pinnedCourseOptions[c.courseCode]===c.optionKey,titleText=`${c.courseCode} — ${prof}`;
+    return `<div class="section-card ${isPinned?'pinned':''}" data-result-pin-course="${esc(c.courseCode)}" data-result-pin-option="${esc(c.optionKey||'')}" style="--course-color:${courseColor(c.courseCode)}" title="${esc(`Click this card to ${isPinned?'unlock':'lock'} this course option. Profile, RMP, and Compare buttons remain independent.`)}"><div class="section-title"><h3 title="${esc(titleText)}">${esc(titleText)}${isPinned?' 📌':''}</h3>${actionHtml}</div><div class="section-line">${esc(comps.map(x=>x.section).filter(Boolean).join(' + ')||'Section')}${linked?' • 🔒 linked bundle':''}</div>${linked?'<div class="section-line" style="font-weight:700;color:#405064">Required lecture/lab/discussion/no-credit components stay together when this option is pinned or ranked.</div>':''}${bundleRows}${altNote}<div class="section-line">${esc(times)}</div>${special&&exact?`<div class="section-line special-note">${special} dated discussion/lab/test meeting${special===1?'':'s'} differs from the normal weekly pattern — browse the semester timeline below the calendar.</div>`:''}${detailSource==='vsb-provisional'?'<div class="section-line" style="color:#8a4b00;font-weight:650">Background full-semester verification is still running; this preview uses VSB&#39;s official recurring timetable and conservative conflict checking.</div>':hasFixed&&!exact&&detailSource!=='vsb-legend-fast'?'<div class="section-line fallback-note">Full-semester date verification finished with a conservative fallback for this option. Official recurring meeting times remain enforced.</div>':''}<div class="section-line">CRN ${esc(crns)}${statuses?` • ${esc(statuses)}`:''}</div><div class="section-line">Professor priority ${priority}/5 • ${delivery==='either'?'Either delivery':delivery==='online'?'Online required':'In person required'}${c.professorPreference==='prefer'?' • Preferred professor':''}</div><div class="grade-line">${gradeHtml}</div></div>`;
+  }).join('');
+  $('sectionCards').querySelectorAll('[data-result-prof]').forEach(b=>b.onclick=()=>openProfessorDetail(b.dataset.resultProf,b.dataset.resultName));
+  $('sectionCards').querySelectorAll('[data-result-compare]').forEach(b=>b.onclick=()=>openProfessorCompare(b.dataset.resultCompare,''));
+  $('sectionCards').querySelectorAll('[data-result-pin-course]').forEach(card=>card.onclick=e=>{
+    if(e.target.closest('button,a,input,select,textarea,label,summary'))return;
+    const selection=window.getSelection?.();if(selection&&String(selection).trim())return;
+    toggleCoursePin(card.dataset.resultPinCourse,card.dataset.resultPinOption);
+  });
+}
+
+
+function renderRegistrationBar(s){
+  const visible=visibleCourseSet(),loadedCount=(appState?.courses||[]).length,allCourses=s.courses||[],shown=allCourses.filter(c=>visible.has(c.courseCode)),allShown=visible.size===loadedCount&&shown.length===allCourses.length&&allCourses.length>0;
+  const crns=[...new Set(shown.flatMap(c=>(c.components||[]).map(x=>x.crn).filter(Boolean)))];
+  const fullCrns=[...new Set(allCourses.flatMap(c=>(c.components||[]).map(x=>x.crn).filter(Boolean)))];
+  const visibleCredits=shown.reduce((sum,c)=>sum+(Number.isFinite(Number(c.credits))?Number(c.credits):0),0),scheduleCredits=Number.isFinite(Number(s.totalCredits))?Number(s.totalCredits):null;
+  $('registrationBar').innerHTML=`<div><div class="help">${allShown?'Registration CRNs':'Checked-course CRNs — preview only'}</div><div class="crn-string" id="crnString">${esc(crns.join(' '))||'—'}</div>${!allShown?'<div class="help" style="margin-top:4px">Re-enable all loaded courses before copying a complete registration set.</div>':''}</div><button id="copyCrns" ${allShown&&fullCrns.length?'':'disabled'} title="${allShown?'Copy complete schedule CRNs':'Re-enable all loaded courses to copy complete registration CRNs'}">${allShown?'Copy CRNs':'Show all to copy'}</button><div class="credit-total">${scheduleCredits===null?'—':allShown?`${scheduleCredits.toFixed(1)} total credits`:`${visibleCredits.toFixed(1)} checked-course credits`}</div>`;
+  $('copyCrns').onclick=()=>copyText(fullCrns.join(' '),$('copyCrns'));
+}
+async function copyText(text,button){if(!text)return;try{await navigator.clipboard.writeText(text)}catch{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}const old=button.textContent;button.textContent='Copied';setTimeout(()=>button.textContent=old,1200)}
+
+async function pollOnce(){
+  try{
+    appState=await api("/api/v3/status");
+    ensureCourseUiState();
+    renderService("grade",appState.grade);
+    renderService("schedule",appState.schedule);
+    renderTerms();
+    renderGradeTerms();
+    const renderFp=JSON.stringify((appState.courses||[]).map(c=>[
+      c.courseCode,c.status,c.message,c.optionCount,c.onlineOptionCount,c.inPersonOptionCount,c.honorsOptionCount,c.gradeRows,c.gradeTerms,c.preferences,c.professors,c.progress?.stage,c.progress?.current,c.progress?.total,c.progress?.percent,c.verification?.status,c.verification?.current,c.verification?.total,c.verification?.percent,c.verification?.message,c.cached,c.error
+    ]));
+    if(renderFp!==lastCourseRenderFingerprint){
+      lastCourseRenderFingerprint=renderFp;
+      renderCourses();
+      renderProfessorPreferences();
+    }
+    const verificationCompletionFp=JSON.stringify((appState.courses||[]).map(c=>[c.courseCode,c.verification?.status==="complete"]));
+    if(lastVerificationCompletionFingerprint&&verificationCompletionFp!==lastVerificationCompletionFingerprint&&analysis){invalidateAnalysisClient();analysisDirty=true;analysisAutoBlocked=false;constraintPreviewStale=true;analysisCacheByScope.clear();verificationRefreshPending=fullSemesterVerificationComplete();analysisProgressState=null;renderAnalysisProgress(null);setUpdateButton();renderVerificationOverview()}
+    lastVerificationCompletionFingerprint=verificationCompletionFp;
+    const busy=appState.processing||appState.grade.busy||appState.schedule.busy;
+    $("topProgress").classList.toggle("busy",busy);
+    // Course visibility is purely local UI state and must never invalidate the
+    // underlying timetable cache. Fingerprint only real course/grade inputs.
+    const rankingRmpFp=(appState.courses||[]).map(c=>[c.courseCode,(c.professors||[])
+      .filter(p=>!Number.isFinite(p.adjustedGpa))
+      .map(p=>[p.key||p.name,p.rmp?.status||'',Number(p.rmp?.avgRating)||null,Number(p.rmp?.numRatings)||0])]);
+    const fp=JSON.stringify([
+      appState.selectedTerm,
+      appState.grade.selectedTerms||[],
+      (appState.courses||[]).map(c=>[c.courseCode,c.status,c.optionCount,c.gradeRows,c.gradeTerms,c.preferences]),
+      rankingRmpFp
+    ]);
+    if(fp!==lastCourseFingerprint){
+      if(lastCourseFingerprint){invalidateAnalysisClient();constraintPreviewStale=true;analysisCacheByScope.clear();analysisProgressState=null;renderAnalysisProgress(null)}
+      lastCourseFingerprint=fp;
+      const courseCodes=new Set((appState.courses||[]).map(c=>c.courseCode));for(const code of Object.keys(pinnedCourseOptions))if(!courseCodes.has(code))delete pinnedCourseOptions[code];
+      analysisDirty=true;
+      analysisAutoBlocked=false;
+      renderAnalysis();
+    }else{
+      setUpdateButton();
+    }
+    autoAnalyzeIfReady(140);
+    queueRmpEnrichment();
+    return appState
+  }catch(e){showError(e.message)}
+}
+
+let pollPromise=null;
+async function poll(){
+  if(pollPromise)return await pollPromise;
+  pollPromise=pollOnce();
+  try{return await pollPromise}finally{pollPromise=null}
+}
+
+$("gradeLoginBtn").onclick=()=>login("grade");
+$("scheduleLoginBtn").onclick=()=>login("schedule");
+$("gradeReconnect").onclick=()=>reconnect("grade");
+$("scheduleReconnect").onclick=()=>reconnect("schedule");
+$("gradePreview").onclick=()=>preview("grade");
+$("schedulePreview").onclick=()=>preview("schedule");
+$("refreshPreview").onclick=refreshPreview;
+$("closePreview").onclick=()=>$("previewModal").classList.add("hidden");
+$("previewModal").onclick=e=>{if(e.target===$("previewModal"))$("previewModal").classList.add("hidden")};
+$("cancelPinnedChange").onclick=()=>closePinnedChangeConfirm(false);
+$("confirmPinnedChange").onclick=()=>closePinnedChangeConfirm(true);
+$("changeConfirmModal").onclick=e=>{if(e.target===$("changeConfirmModal"))closePinnedChangeConfirm(false)};
+$("closeProfModal").onclick=()=>$("profModal").classList.add("hidden");
+$("profModal").onclick=e=>{if(e.target===$("profModal"))$("profModal").classList.add("hidden")};
+$("courseInput").oninput=scheduleCourseSearch;
+$("courseInput").onkeydown=e=>{
+  if(e.key==="ArrowDown"&&courseSuggestions.length){e.preventDefault();suggestionIndex=(suggestionIndex+1)%courseSuggestions.length;renderSuggestions()}
+  else if(e.key==="ArrowUp"&&courseSuggestions.length){e.preventDefault();suggestionIndex=(suggestionIndex-1+courseSuggestions.length)%courseSuggestions.length;renderSuggestions()}
+  else if(e.key==="Enter"&&courseSuggestions.length){e.preventDefault();chooseSuggestion(suggestionIndex<0?0:suggestionIndex)}
+  else if(e.key==="Escape")closeSuggestions()
+};
+document.addEventListener("pointerdown",e=>{
+  const gradeDetails=e.target.closest("details.grade-term-details");
+  document.querySelectorAll("details.grade-term-details[open]").forEach(d=>{if(d!==gradeDetails)d.open=false});
+  if(!e.target.closest(".autocomplete-wrap"))closeSuggestions();
+  const active=document.activeElement;
+  if(active&&active.tagName==="SELECT"&&e.target!==active&&!e.target.closest("select"))active.blur();
+});
+$("reanalyzeBtn").onclick=runAnalyze;
+$("prevSchedule").onclick=()=>{if(scheduleIndex>0){scheduleIndex--;renderSchedule()}};
+$("nextSchedule").onclick=()=>{const list=activeSchedules();if(analysis&&scheduleIndex<list.length-1){scheduleIndex++;renderSchedule()}};
+$("schedulePicker").onchange=()=>{const i=Number($("schedulePicker").value),list=activeSchedules();if(analysis&&Number.isInteger(i)&&i>=0&&i<list.length){scheduleIndex=i;renderSchedule()}};
+$("prevWeek").onclick=()=>{const s=activeSchedules()[scheduleIndex],weeks=s?scheduleWeeks(s):[],i=weeks.indexOf(currentWeekStart);if(i>0){currentWeekStart=weeks[i-1];renderCalendar(s)}};
+$("nextWeek").onclick=()=>{const s=activeSchedules()[scheduleIndex],weeks=s?scheduleWeeks(s):[],i=weeks.indexOf(currentWeekStart);if(i>=0&&i<weeks.length-1){currentWeekStart=weeks[i+1];renderCalendar(s)}};
+$("weekSlider").oninput=()=>{const s=activeSchedules()[scheduleIndex],weeks=s?scheduleWeeks(s):[],i=Number($("weekSlider").value);if(weeks[i]){currentWeekStart=weeks[i];renderCalendar(s)}};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&changeConfirmResolver){e.preventDefault();closePinnedChangeConfirm(false);return}if(e.target&&['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName))return;const list=activeSchedules();if(e.key==='ArrowRight'&&analysis&&scheduleIndex<list.length-1){scheduleIndex++;renderSchedule()}else if(e.key==='ArrowLeft'&&scheduleIndex>0){scheduleIndex--;renderSchedule()}});
+
+$("noFriday").onchange=()=>{Object.assign(prefs,currentPrefs());markAnalysisDirty({clear:false,constraintStale:false,auto:true})};
+for(const id of ["allowFull","allowWaitlist","honorsMode"]){
+  $(id).onchange=()=>{Object.assign(prefs,currentPrefs());markAnalysisDirty({clear:false,constraintStale:true,auto:true})}
+}
+$("dayPreference").onchange=()=>{Object.assign(prefs,currentPrefs());markAnalysisDirty({clear:false,constraintStale:false,auto:true})};
+$("gradeWeight").oninput=()=>{
+  prefs.gradeWeight=Number($("gradeWeight").value);
+  updateGradeBalanceLabel();
+  markAnalysisDirty({clear:false,constraintStale:false,auto:true,autoDelay:280})
+};
+$("relaxBtn").onclick=()=>{
+  prefs.earliestStart=null;prefs.latestEnd=null;prefs.maxGap=null;
+  $("noFriday").checked=false;
+  Object.assign(prefs,currentPrefs());
+  markAnalysisDirty({clear:false,constraintStale:false,auto:true})
+};
+
+document.addEventListener("focusout",e=>{
+  if(e.target?.matches?.('#courseList select[data-priority], #courseList select[data-delivery]'))setTimeout(flushPendingCourseRender,0);
+});
+
+renderChoices();
+updateGradeBalanceLabel();
+poll().then(()=>renderAnalysis());
+setInterval(poll,1000);
+</script>
+</body>
+</html>

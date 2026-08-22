@@ -1,3 +1,4 @@
+<!-- Copyright 2026 Ty Anderson | SPDX-License-Identifier: Apache-2.0 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -47,13 +48,84 @@ input[type="search"]{width:100%;border:1px solid #aaa;border-radius:8px;padding:
 footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);font-size:13px}
 @media(max-width:1100px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.profile-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.chart-grid{grid-template-columns:1fr}.detail-filters{grid-template-columns:1fr 1fr}}
 @media(max-width:650px){main{padding:12px}.header-wrap{padding:17px 14px}.filters,.profile-metrics,.metrics,.detail-filters{grid-template-columns:1fr}.donut-wrap{grid-template-columns:1fr;justify-items:center}.multi-panel{width:min(90vw,350px)}}
+
+/* V3.0.12 responsive polish */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,.button-link,input,select,summary{touch-action:manipulation}
+button,.button-link{min-height:40px}
+button:focus-visible,.button-link:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid rgba(204,0,0,.24);outline-offset:2px}
+.note,.muted{overflow-wrap:anywhere}
+.table-wrap{max-width:100%;scrollbar-width:thin;overscroll-behavior-inline:contain;-webkit-overflow-scrolling:touch}
+.table-wrap table{min-width:max-content}
+.subject-title,.course-ranking-title{flex-wrap:wrap}
+.detail-title{font-size:clamp(22px,2.2vw,27px);line-height:1.15}
+.detail-hero>div:first-child{min-width:0}
+.rmp-summary{margin:14px 0;padding:12px;border:1px solid #ead58d;border-radius:10px;background:#fff9e8;color:#5f4a09}
+.rmp-summary-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:9px}
+.rmp-summary-head strong{font-size:14px;color:#4f3d05}.rmp-summary-head span{font-size:11px;color:#7a661f}
+.rmp-summary-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.rmp-summary-metric{border:1px solid #eadb9f;background:rgba(255,255,255,.72);border-radius:8px;padding:8px 9px;min-width:0}
+.rmp-summary-metric span{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.035em;font-weight:800;color:#7b691f}
+.rmp-summary-metric strong{display:block;margin-top:3px;font-size:17px;color:#3f3309;overflow-wrap:anywhere}
+.rmp-summary-meta{margin-top:8px;font-size:12px;line-height:1.4;color:#6e5a14}
+.rmp-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:8px}.rmp-tag{display:inline-flex;align-items:center;padding:4px 7px;border:1px solid #e4cf7a;background:#fff4c8;border-radius:999px;font-size:11px;font-weight:700;color:#664f00}
+@media(max-width:650px){
+  .header-actions{width:100%}.header-actions .button-link{flex:1 1 145px}
+  .metrics,.profile-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .filters,.detail-filters{grid-template-columns:1fr}
+  .metric{padding:11px 12px}.metric strong{font-size:22px}.profile-metric{padding:10px}.profile-metric strong{font-size:19px}
+  .detail-hero .actions{width:100%}.detail-hero .actions>*{flex:1 1 120px}
+  .rmp-summary-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .card-head,.card-body{padding-left:14px;padding-right:14px}
+  table{font-size:13px}th,td{padding:8px 9px}
+  .chart-card{padding:12px}.legend-row{font-size:12px}
+}
+@media(max-width:360px){
+  main{padding:10px}.header-wrap{padding-left:12px;padding-right:12px}
+  .header-actions .button-link{flex-basis:100%}
+  .metrics,.profile-metrics{gap:7px}.metric,.profile-metric{padding:9px 10px}
+  .rmp-summary{padding:10px}.rmp-summary-metric{padding:7px}
+}
+
+
+/* V3.0.13 cross-app consistency */
+:root{--rmp-bg:#fffaf0;--rmp-line:#ead9a7;--rmp-ink:#5f4700;--rmp-muted:#806b2d}
+.header-wrap,main,footer{max-width:1420px}
+.header-wrap{padding:18px 20px}header h1{font-size:25px}.card{border-radius:14px}
+.check-list{gap:4px}.check-row{display:grid;grid-template-columns:18px minmax(0,1fr);gap:10px;align-items:start;min-height:38px;padding:8px 7px;line-height:1.3}.check-row input[type="checkbox"]{appearance:auto;width:17px;height:17px;min-width:17px;margin:1px 0 0;accent-color:var(--red)}.check-row span{min-width:0;overflow-wrap:anywhere}
+.rank-rmp-cell{min-width:275px;max-width:340px;text-align:left!important;white-space:normal!important;vertical-align:middle}
+.rank-rmp-card{border:1px solid var(--rmp-line);border-radius:8px;background:var(--rmp-bg);padding:8px 9px;color:var(--rmp-ink);min-width:245px}
+.rank-rmp-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:5px}.rank-rmp-head strong{font-size:12px}.rank-rmp-head .student-feedback{font-size:9px;color:var(--rmp-muted);font-weight:750;text-transform:uppercase;letter-spacing:.035em}
+.rank-rmp-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.rank-rmp-stat{min-width:0;background:rgba(255,255,255,.72);border:1px solid #eee0b8;border-radius:6px;padding:5px 6px}.rank-rmp-stat span{display:block;font-size:8.5px;line-height:1.15;text-transform:uppercase;letter-spacing:.025em;color:var(--rmp-muted);font-weight:800}.rank-rmp-stat strong{display:block;margin-top:2px;font-size:12px;line-height:1.2;color:var(--rmp-ink);white-space:nowrap}.rank-rmp-meta{font-size:11px;line-height:1.4;color:#705b1b}.rank-rmp-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}.rank-rmp-tag{display:inline-flex;padding:2px 5px;border:1px solid #ead58d;border-radius:999px;background:#fff3cc;font-size:9px;font-weight:750;color:#6b4d00}.rank-rmp-actions{display:flex;justify-content:flex-end;margin-top:6px}.rank-rmp-actions .button-link{min-height:30px;padding:4px 7px;font-size:10px}
+.rank-rmp-placeholder{font-size:11px;color:var(--muted);font-weight:650;padding:4px 1px}
+.rank-profile-btn{min-height:32px;padding:6px 8px;font-size:11px;white-space:nowrap}
+.professor-ranking-table th:nth-child(2),.professor-ranking-table td:nth-child(2){white-space:normal;min-width:150px;max-width:270px;overflow-wrap:anywhere}
+@media(max-width:700px){
+  .professor-ranking-table{display:block!important;min-width:0!important;width:100%;border:0}
+  .professor-ranking-table thead{display:none}
+  .professor-ranking-table tbody{display:grid;gap:10px;padding:10px}
+  .professor-ranking-table tr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}
+  .professor-ranking-table td{display:block;border:0!important;padding:7px 8px!important;text-align:left!important;white-space:normal!important;min-width:0;max-width:none!important;background:var(--soft);border-radius:7px}
+  .professor-ranking-table td::before{content:attr(data-label);display:block;margin-bottom:3px;font-size:9px;line-height:1.15;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:850}
+  .professor-ranking-table td:nth-child(1){display:none}
+  .professor-ranking-table td:nth-child(2){grid-column:1/-1;background:#fff;padding:2px 1px 5px!important;font-size:16px;font-weight:850}
+  .professor-ranking-table td:nth-child(2)::before{content:'Professor';font-size:9px}
+  .professor-ranking-table td:nth-child(3){display:none}
+  .professor-ranking-table td:nth-child(9){background:#fff;padding:2px 1px!important;display:flex;align-items:center;gap:8px}
+  .professor-ranking-table td:nth-child(9)::before{display:none}
+  .professor-ranking-table td:nth-child(10){grid-column:1/-1;background:transparent;padding:0!important}
+  .professor-ranking-table td:nth-child(10)::before{display:none}
+  .professor-ranking-table .rank-rmp-cell,.professor-ranking-table .rank-rmp-card{min-width:0!important;max-width:none!important;width:100%}
+}
+@media(max-width:650px){.header-wrap{padding-left:14px;padding-right:14px}.rank-rmp-cell{min-width:245px}.rank-rmp-card{min-width:220px}.rank-rmp-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
 </style>
 </head>
 <body>
 <header>
   <div class="header-wrap">
     <div><h1>TTU Grade Analytics</h1><p>Compare courses and professors across the terms you scraped.</p></div>
-    <div class="header-actions"><a class="button-link" href="/">← Back to Grade Scraper</a></div>
+    <div class="header-actions"><a class="button-link" href="/">← Grade Scraper</a><a class="button-link" href="/schedule-analyzer.html">Schedule Analyzer</a></div>
   </div>
 </header>
 <main>
@@ -100,6 +172,7 @@ footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);fon
         <div class="profile-metric"><span>Students</span><strong id="detailStudents">—</strong></div>
         <div class="profile-metric"><span id="detailCountLabel">Sections</span><strong id="detailCount">—</strong></div>
       </div>
+      <div id="detailRmpSummary" class="rmp-summary" style="display:none"></div>
 
       <div class="chart-grid">
         <div class="chart-card">
@@ -124,7 +197,7 @@ footer{max-width:1680px;margin:0 auto;padding:0 22px 28px;color:var(--muted);fon
   </section>
 
   <section class="card">
-    <div class="card-head"><div><h2>Professor rankings by subject and course</h2><div class="note">Each course is ranked independently inside its subject. A professor who teaches multiple courses receives a separate ranking for each course using only that course's data.</div></div></div>
+    <div class="card-head"><div><h2>Professor rankings by subject and course</h2><div class="note">Each course is ranked independently using TTU grade distribution data. Rate My Professors is loaded inline as separate student-feedback context so you do not have to open each professor profile.</div></div></div>
     <div class="card-body"><div id="professorGroups" class="subject-stack"></div><div class="adjust-note note"><strong>Adjusted GPA:</strong> rankings are calculated separately for each course. Each professor/course/term result is shrunk toward that course-term average with a 25-student prior, then the selected terms for that same course are combined using the number of graded students. Data from other courses is never mixed into that course's ranking.</div></div>
   </section>
 
@@ -161,7 +234,8 @@ const state={
     filters:{term:new Set(),subject:new Set(),course:new Set(),instructor:new Set()},
     filterOptions:{term:[],subject:[],course:[],instructor:[]},
     profSort:{key:'adjustedGpa',dir:-1},courseSort:{key:'course',dir:1},detailSort:{key:'adjustedGpa',dir:-1},
-    detail:null
+    detail:null,
+    rmp:new Map(),rmpLoading:new Set(),rmpTriedAt:new Map()
 };
 
 function pct(n,d){return d?100*n/d:null}
@@ -181,11 +255,70 @@ function finalize(x){
 }
 function termValue(term){const m=String(term||'').match(/(Spring|Summer|Fall|Winter)\s+(\d{4})/i);if(!m)return 0;const season={winter:0,spring:1,summer:2,fall:3}[m[1].toLowerCase()]??0;return Number(m[2])*10+season}
 function displayName(name){const s=String(name||'').trim();if(!s.includes(','))return s;const p=s.split(',');return (p.slice(1).join(',').trim()+' '+p[0].trim()).trim()}
-function rmpUrl(name){return 'https://www.ratemyprofessors.com/search/professors/'+RMP_SCHOOL_ID+'?q='+encodeURIComponent(displayName(name))}
+function rmpUrl(name,rmp=null){return rmp?.profileUrl||'https://www.ratemyprofessors.com/search/professors/'+RMP_SCHOOL_ID+'?q='+encodeURIComponent(displayName(name))}
+function rmpHasRatings(rmp){const n=Number(rmp?.numRatings||0),rating=Number(rmp?.avgRating);return rmp?.status==='success'&&n>0&&Number.isFinite(rating)&&rating>=1&&rating<=5}
+function rmpKey(name,course){return displayName(name).toLowerCase().replace(/[^a-z0-9]+/g,' ')+'::'+String(course||'').toUpperCase().replace(/[^A-Z0-9]/g,'')}
+async function ensureRmp(name,course){
+    const key=rmpKey(name,course);if(state.rmp.has(key)||state.rmpLoading.has(key)||Date.now()-Number(state.rmpTriedAt.get(key)||0)<5*60*1000)return;
+    state.rmpTriedAt.set(key,Date.now());state.rmpLoading.add(key);
+    try{const res=await fetch('/api/rmp/batch',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:[{name,courseCode:course}]})});const data=await res.json();if(res.ok&&data.results?.[0])state.rmp.set(key,data.results[0]);}
+    catch{state.rmp.set(key,{status:'error',name,courseCode:course})}finally{state.rmpLoading.delete(key);if(state.detail?.type==='professor'&&state.detail.name===name)renderDetail()}
+}
+function ensureRmpBatch(items){
+    const unique=[];const seen=new Set();const now=Date.now();
+    for(const raw of items||[]){const name=String(raw?.name||'').trim(),course=String(raw?.courseCode||'').trim();if(!name)continue;const key=rmpKey(name,course);if(!key||seen.has(key)||state.rmp.has(key)||state.rmpLoading.has(key)||now-Number(state.rmpTriedAt.get(key)||0)<5*60*1000)continue;seen.add(key);unique.push({name,courseCode:course,key})}
+    if(!unique.length)return;
+    unique.forEach(item=>{state.rmpLoading.add(item.key);state.rmpTriedAt.set(item.key,now)});
+    void(async()=>{
+        for(let offset=0;offset<unique.length;offset+=40){
+            const batch=unique.slice(offset,offset+40);
+            try{
+                const res=await fetch('/api/rmp/batch',{method:'POST',cache:'no-store',headers:{'Content-Type':'application/json'},body:JSON.stringify({items:batch.map(({name,courseCode})=>({name,courseCode}))})});
+                const data=await res.json();
+                if(!res.ok)throw new Error(data?.error||`RMP request failed (${res.status})`);
+                batch.forEach((item,index)=>state.rmp.set(item.key,data.results?.[index]||{status:'not-found',name:item.name,courseCode:item.courseCode}));
+            }catch{
+                batch.forEach(item=>state.rmp.set(item.key,{status:'error',name:item.name,courseCode:item.courseCode}));
+            }finally{
+                batch.forEach(item=>state.rmpLoading.delete(item.key));
+                renderProfessorGroups(filtered());
+            }
+        }
+    })();
+}
+function rankingRmpCell(name,course){
+    const cell=document.createElement('td');cell.className='rank-rmp-cell';const key=rmpKey(name,course),rmp=state.rmp.get(key);
+    if(!rmp){const p=document.createElement('div');p.className='rank-rmp-placeholder';p.textContent=state.rmpLoading.has(key)?'Loading student feedback…':'Student feedback queued…';cell.appendChild(p);return cell}
+    if(rmp.status!=='success'){
+        const card=document.createElement('div');card.className='rank-rmp-card';const head=document.createElement('div');head.className='rank-rmp-head';const title=document.createElement('strong');title.textContent='Rate My Professors';const source=document.createElement('span');source.className='student-feedback';source.textContent='student feedback';head.append(title,source);const msg=document.createElement('div');msg.className='rank-rmp-meta';msg.textContent=rmp.status==='error'?'RMP temporarily unavailable. TTU grade ranking is unaffected.':'No confident automatic match. Use the RMP search link.';const actions=document.createElement('div');actions.className='rank-rmp-actions';actions.appendChild(linkRmp(name,rmp));card.append(head,msg,actions);cell.appendChild(card);return cell
+    }
+    const card=document.createElement('div');card.className='rank-rmp-card';const head=document.createElement('div');head.className='rank-rmp-head';const title=document.createElement('strong');title.textContent='Rate My Professors';const source=document.createElement('span');source.className='student-feedback';source.textContent='student feedback';head.append(title,source);card.appendChild(head);
+    const hasRatings=rmpHasRatings(rmp);const grid=document.createElement('div');grid.className='rank-rmp-grid';const metrics=[['Rating',hasRatings?`${Number(rmp.avgRating).toFixed(1)}/5`:'—'],['Difficulty',hasRatings&&Number.isFinite(Number(rmp.avgDifficulty))&&Number(rmp.avgDifficulty)>0?`${Number(rmp.avgDifficulty).toFixed(1)}/5`:'—'],['Take again',hasRatings&&Number.isFinite(Number(rmp.wouldTakeAgainPercent))?`${Math.round(Number(rmp.wouldTakeAgainPercent))}%`:'—'],['Ratings',hasRatings?Number(rmp.numRatings).toLocaleString():'—']];metrics.forEach(([label,value])=>{const stat=document.createElement('div');stat.className='rank-rmp-stat';const l=document.createElement('span');l.textContent=label;const v=document.createElement('strong');v.textContent=value;stat.append(l,v);grid.appendChild(stat)});card.appendChild(grid);
+    const tags=(rmp.tags||[]).slice(0,2);if(tags.length){const wrap=document.createElement('div');wrap.className='rank-rmp-tags';tags.forEach(item=>{const tag=document.createElement('span');tag.className='rank-rmp-tag';tag.textContent=item.name;wrap.appendChild(tag)});card.appendChild(wrap)}
+    const actions=document.createElement('div');actions.className='rank-rmp-actions';actions.appendChild(linkRmp(name,rmp));card.appendChild(actions);cell.appendChild(card);return cell
+}
+function renderDetailRmp(name,course){
+    const box=$('detailRmpSummary'),key=rmpKey(name,course),rmp=state.rmp.get(key);if(!box)return;
+    const showMessage=message=>{box.style.display='block';box.replaceChildren();const m=document.createElement('div');m.className='note';m.textContent=message;box.appendChild(m)};
+    if(!rmp){showMessage('Loading Rate My Professors summary…');ensureRmp(name,course);return}
+    if(rmp.status!=='success'){showMessage(rmp.status==='error'?'Rate My Professors is temporarily unavailable. TTU grade analytics are unaffected.':'Rate My Professors profile was not matched automatically. Use the RMP link to search manually.');$('detailRmpLink').href=rmpUrl(name,rmp);return}
+    box.style.display='block';box.replaceChildren();
+    const head=document.createElement('div');head.className='rmp-summary-head';const title=document.createElement('strong');title.textContent='Rate My Professors';const meta=document.createElement('span');meta.textContent=[rmp.department||'Texas Tech',rmp.courseMatched?'course code matched':'name match'].filter(Boolean).join(' • ');head.append(title,meta);box.appendChild(head);
+    const metrics=document.createElement('div');metrics.className='rmp-summary-metrics';
+    const add=(label,value)=>{const c=document.createElement('div');c.className='rmp-summary-metric';const l=document.createElement('span');l.textContent=label;const v=document.createElement('strong');v.textContent=value;c.append(l,v);metrics.appendChild(c)};
+    const hasRatings=rmpHasRatings(rmp);
+    add('Rating',hasRatings?Number(rmp.avgRating).toFixed(1)+'/5':'—');
+    add('Difficulty',hasRatings&&Number.isFinite(Number(rmp.avgDifficulty))&&Number(rmp.avgDifficulty)>0?Number(rmp.avgDifficulty).toFixed(1)+'/5':'—');
+    add('Would take again',hasRatings&&Number.isFinite(Number(rmp.wouldTakeAgainPercent))?Math.round(Number(rmp.wouldTakeAgainPercent))+'%':'—');
+    add('Ratings',hasRatings?Number(rmp.numRatings).toLocaleString():'—');
+    box.appendChild(metrics);
+    const tags=(rmp.tags||[]).slice(0,5);if(tags.length){const tagWrap=document.createElement('div');tagWrap.className='rmp-tags';tags.forEach(t=>{const tag=document.createElement('span');tag.className='rmp-tag';tag.textContent=`${t.name} (${t.count})`;tagWrap.appendChild(tag)});box.appendChild(tagWrap)}
+    $('detailRmpLink').href=rmpUrl(name,rmp);
+}
 function compareUrl(subject,course,terms=[],profs=[]){const q=new URLSearchParams();q.set('subject',subject||'');q.set('course',course||'');if(terms.length)q.set('terms',terms.map(encodeURIComponent).join('~'));if(profs.length)q.set('profs',profs.map(encodeURIComponent).join('~'));return 'TTU_professor_compare.html?'+q.toString()}
 function td(text,cls){const e=document.createElement('td');e.textContent=text;if(cls)e.className=cls;return e}
 function icon(handler,title){const b=document.createElement('button');b.type='button';b.className='icon-btn';b.textContent='↗';b.title=title;b.setAttribute('aria-label',title);b.addEventListener('click',handler);return b}
-function linkRmp(name){const a=document.createElement('a');a.className='button-link rmp-link';a.href=rmpUrl(name);a.target='_blank';a.rel='noopener noreferrer';a.textContent='RMP ↗';return a}
+function linkRmp(name,rmp=null){const a=document.createElement('a');a.className='button-link rmp-link';a.href=rmpUrl(name,rmp);a.target='_blank';a.rel='noopener noreferrer';a.textContent='RMP ↗';return a}
 function cmp(a,b,key,dir){const av=a[key],bv=b[key];if(av==null&&bv==null)return 0;if(av==null)return 1;if(bv==null)return-1;if(typeof av==='number'&&typeof bv==='number')return(av-bv)*dir;return String(av).localeCompare(String(bv),undefined,{numeric:true})*dir}
 
 function detailed(rows){
@@ -289,6 +422,7 @@ function renderProfessorGroups(rows){
     const host=$('professorGroups');
     host.innerHTML='';
     const subjects=uniq(rows.map(r=>r.subject));
+    const rmpRequests=[];
 
     if(!subjects.length){
         host.appendChild(Object.assign(document.createElement('div'),{
@@ -341,12 +475,13 @@ function renderProfessorGroups(rows){
                 {label:'Adjusted GPA',key:'adjustedGpa'},
                 {label:'A %',key:'aRate'},
                 {label:'DFW %',key:'dfwRate'},
-                {label:'View'},
-                {label:'RMP'}
+                {label:'Profile'},
+                {label:'RMP student feedback'}
             ];
 
             const t=tableWithHeader(headers);
             t.table.dataset.sortGroup='professor';
+            t.table.classList.add('professor-ranking-table');
 
             items.forEach((x,index)=>{
                 const tr=document.createElement('tr');
@@ -363,12 +498,12 @@ function renderProfessorGroups(rows){
 
                 const v=document.createElement('td');
                 v.className='icon-cell';
-                v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));
+                const profileBtn=document.createElement('button');profileBtn.className='rank-profile-btn';profileBtn.type='button';profileBtn.textContent='Profile ↗';profileBtn.title='Open professor analytics';profileBtn.onclick=()=>openProfessor(x.instructor);v.appendChild(profileBtn);
                 tr.appendChild(v);
 
-                const r=document.createElement('td');
-                r.appendChild(linkRmp(x.instructor));
-                tr.appendChild(r);
+                rmpRequests.push({name:x.instructor,courseCode:course});
+                tr.appendChild(rankingRmpCell(x.instructor,course));
+                [...tr.children].forEach((cell,cellIndex)=>{cell.dataset.label=headers[cellIndex]?.label||''});
 
                 t.body.appendChild(tr);
             });
@@ -380,6 +515,7 @@ function renderProfessorGroups(rows){
         subjectBlockEl.appendChild(courseStack);
         host.appendChild(subjectBlockEl);
     });
+    ensureRmpBatch(rmpRequests);
 }
 function renderCourseGroups(rows){
     const host=$('courseGroups');host.innerHTML='';const subjects=uniq(rows.map(r=>r.subject));
@@ -502,13 +638,13 @@ function renderDetail(){
     if(d.type==='professor'){
         $('detailTitle').textContent=d.name;
         $('detailSubtitle').textContent=uniq(rows.map(r=>r.subject)).join(' • ')+' · '+uniq(rows.map(r=>r.term)).length+' selected term(s) · '+uniq(rows.map(r=>courseKey(r.subject,r.course))).length+' selected course(s)';
-        $('detailRmpLink').style.display='inline-flex';$('detailRmpLink').href=rmpUrl(d.name);const selectedCourseKeys=Array.from(d.filters.course);const firstCourseKey=selectedCourseKeys[0]||d.options.course[0]?.value||'';const [compareSubject,compareCourse]=firstCourseKey.split('||');$('detailCompareLink').style.display=compareCourse?'inline-flex':'none';$('detailCompareLink').href=compareCourse?compareUrl(compareSubject,compareCourse,Array.from(d.filters.term),[d.name]):'#';setDetailMetrics(agg,'Sections',agg.sections);
+        $('detailRmpLink').style.display='inline-flex';const selectedCourseKeys=Array.from(d.filters.course);const firstCourseKey=selectedCourseKeys[0]||d.options.course[0]?.value||'';const [compareSubject,compareCourse]=firstCourseKey.split('||');$('detailRmpLink').href=rmpUrl(d.name,state.rmp.get(rmpKey(d.name,compareCourse)));$('detailCompareLink').style.display=compareCourse?'inline-flex':'none';$('detailCompareLink').href=compareCourse?compareUrl(compareSubject,compareCourse,Array.from(d.filters.term),[d.name]):'#';setDetailMetrics(agg,'Sections',agg.sections);renderDetailRmp(d.name,compareCourse);
         $('historyTitle').textContent='Selected courses and terms taught';historyHeader(['Term','Subject','Course','Sections','Students','GPA','Adjusted GPA','A %','DFW %','View course']);
         const body=$('historyTable').querySelector('tbody');det.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.term,'left'),td(x.subject,'left'),td(x.course,'left'),td(x.sections),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openCourse(x.subject,x.course),'Analyze course'));tr.appendChild(v);body.appendChild(tr)});
     }else{
         $('detailTitle').textContent=d.course;
         $('detailSubtitle').textContent=d.subject+' · '+uniq(rows.map(r=>r.term)).length+' selected term(s) · '+uniq(rows.map(r=>r.instructor)).length+' selected professor(s)';
-        $('detailRmpLink').style.display='none';$('detailCompareLink').style.display='inline-flex';$('detailCompareLink').href=compareUrl(d.subject,d.course,Array.from(d.filters.term),Array.from(d.filters.instructor).slice(0,4));setDetailMetrics(agg,'Professors',uniq(rows.map(r=>r.instructor)).length);
+        $('detailRmpLink').style.display='none';$('detailRmpSummary').style.display='none';$('detailCompareLink').style.display='inline-flex';$('detailCompareLink').href=compareUrl(d.subject,d.course,Array.from(d.filters.term),Array.from(d.filters.instructor).slice(0,4));setDetailMetrics(agg,'Professors',uniq(rows.map(r=>r.instructor)).length);
         $('historyTitle').textContent='Selected terms and professors';historyHeader(['Term','Professor','Sections','Students','GPA','Adjusted GPA','A %','DFW %','View professor']);
         const body=$('historyTable').querySelector('tbody');det.forEach(x=>{const tr=document.createElement('tr');tr.append(td(x.term,'left'),td(x.instructor,'left'),td(x.sections),td(x.students),td(fg(x.gpa)),td(fg(x.adjustedGpa)),td(fp(x.aRate)),td(fp(x.dfwRate)));const v=document.createElement('td');v.className='icon-cell';v.appendChild(icon(()=>openProfessor(x.instructor),'Analyze professor'));tr.appendChild(v);body.appendChild(tr)});
     }

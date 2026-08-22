@@ -9,8 +9,20 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Installing Node dependencies...
-call npm install
+node -e "process.exit(Number(process.versions.node.split('.')[0]) >= 20 ? 0 : 1)" >nul 2>nul
+if errorlevel 1 (
+    echo Node.js 20 or newer is required.
+    node --version
+    pause
+    exit /b 1
+)
+
+echo Installing exact Node dependencies from package-lock.json...
+if exist package-lock.json (
+    call npm ci
+) else (
+    call npm install
+)
 if errorlevel 1 goto :fail
 
 echo.

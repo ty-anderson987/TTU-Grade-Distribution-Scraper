@@ -1,19 +1,22 @@
 {
-  "name": "ttu-grade-scraper-v2-7",
-  "version": "2.8.0",
-  "description": "Headless local web GUI for Texas Tech Cognos grade distribution scraping, course/professor analytics and visual grade distributions.",
+  "name": "ttu-grade-scraper",
+  "version": "3.1.1",
+  "description": "Local Texas Tech grade-distribution analytics and schedule optimization with Playwright automation.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "install-browser": "npx playwright install chromium"
+    "install-browser": "npx playwright install chromium",
+    "test": "node test-schedule-engine.js && node test-parallel-utils.js && node test-schedule-scraper.js && node test-scraper-reliability.js && node test-rmp-client.js && node test-release-ui.js"
   },
   "keywords": [
     "texas-tech",
     "cognos",
     "playwright",
-    "grade-distribution"
+    "grade-distribution",
+    "schedule-builder",
+    "schedule-optimizer"
   ],
-  "license": "MIT",
+  "license": "Apache-2.0",
   "type": "commonjs",
   "engines": {
     "node": ">=20"
