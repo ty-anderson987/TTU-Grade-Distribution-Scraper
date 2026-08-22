@@ -76,4 +76,4 @@ End If
 On Error GoTo 0
 
 ' Start one fresh hidden backend. server.js opens the local GUI in the default browser.
-shell.Run "cmd /c node server.js >> """ & logFile & """ 2>&1", 0, False
+shell.Run "cmd /c node server.js > """ & logFile & """ 2>&1", 0, False
