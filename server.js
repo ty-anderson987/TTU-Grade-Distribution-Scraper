@@ -89,6 +89,7 @@ function patchScheduleState(patch) {
 }
 
 const scheduleScraper = new TTUScheduleScraper({
+    sessionLabel: "primary",
     onStatus(update) {
         patchScheduleState(update);
         updateVerificationFromScheduleStatus(update);
@@ -136,6 +137,7 @@ async function ensureScheduleWorkerPool(count) {
                 const workerNumber = base + offset + 2;
                 const statusBridge = { handler: null };
                 return scheduleScraper.createParallelWorker({
+                    sessionLabel: `worker-${workerNumber}`,
                     onStatus(update) {
                         if (update.message) console.log(`[schedule-worker-${workerNumber}] ${update.message}`);
                         if (typeof statusBridge.handler === "function") statusBridge.handler(update);
@@ -152,7 +154,19 @@ async function ensureScheduleWorkerPool(count) {
                 if (result.status === "fulfilled") {
                     if (scheduleWorkerPool.length < MAX_SCHEDULE_PREFETCH_WORKERS - 1) {
                         scheduleWorkerPool.push(result.value);
-                        console.log(`[schedule-workers] Isolated worker ready (${scheduleWorkerPool.length + 1}/${MAX_SCHEDULE_PREFETCH_WORKERS} total VSB sessions).`);
+                        const identities = [scheduleScraper, ...scheduleWorkerPool]
+                            .map((worker, index) => `${index === 0 ? "primary" : `worker-${worker.__workerNumber || index + 1}`}=${worker.vsbSessionMarker || "unmarked"}/${worker.vsbSessionCookieFingerprint || "unknown"}`)
+                            .join(" | ");
+                        const fingerprints = [scheduleScraper, ...scheduleWorkerPool]
+                            .map(worker => worker.vsbSessionCookieFingerprint)
+                            .filter(value => value && value !== "none");
+                        const uniqueFingerprints = new Set(fingerprints);
+                        const fingerprintNote = fingerprints.length < 2
+                            ? "server-cookie uniqueness not yet comparable"
+                            : uniqueFingerprints.size === fingerprints.length
+                                ? "server-cookie fingerprints are distinct"
+                                : "WARNING: duplicate server-cookie fingerprint detected";
+                        console.log(`[schedule-workers] Isolated worker ready (${scheduleWorkerPool.length + 1}/${MAX_SCHEDULE_PREFETCH_WORKERS} total VSB sessions). Session identities: ${identities}. ${fingerprintNote}.`);
                     } else {
                         await result.value.close().catch(() => {});
                     }

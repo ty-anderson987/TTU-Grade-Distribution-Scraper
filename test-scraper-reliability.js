@@ -162,6 +162,33 @@ async function runSequence(sequence) {
     assert.deepStrictEqual(historicalReportExpectation, { termText: 'Fall 2026', courseText: 'ECE 3311' });
     assert.strictEqual(exactHistoricalResult.rows[0].courseNumber, '3311');
 
+    // Schedule Analyzer grade history should also use two page-isolated Cognos workers
+    // and actually overlap term jobs instead of merely creating two tabs serially.
+    const historyScraper = makeScraper('ttu-grade-history-parallel');
+    historyScraper.requireReady = async () => {};
+    historyScraper.terms = [
+        { text: 'Spring 2026', value: '20265' },
+        { text: 'Fall 2025', value: '20262' },
+        { text: 'Summer 2025', value: '20257' },
+        { text: 'Spring 2025', value: '20255' }
+    ];
+    let historyPageId = 0, historyActive = 0, historyPeak = 0;
+    historyScraper.context = { newPage: async () => ({ id: ++historyPageId, close: async () => {} }) };
+    historyScraper.scrapeHistoricalTermWithRetry = async (_page, term, _subjectValue, courseNumber) => {
+        historyActive++; historyPeak = Math.max(historyPeak, historyActive);
+        await new Promise(resolve => setTimeout(resolve, term.value.endsWith('5') ? 25 : 12));
+        historyActive--;
+        return {
+            term: term.text, status: 'success', attempts: 1, error: '',
+            rows: [{ term: term.text, course: `ECE ${courseNumber}`, courseNumber, instructor: term.text }]
+        };
+    };
+    const historyResult = await historyScraper.scrapeCourseHistory('ECE 3311', '', 4);
+    assert.strictEqual(historyPageId, 2, 'grade history should create exactly two Cognos worker pages');
+    assert.strictEqual(historyPeak, 2, 'grade history Cognos workers should actually overlap');
+    assert.deepStrictEqual(historyResult.requestedTerms, historyScraper.terms.map(term => term.text));
+    assert.deepStrictEqual(historyResult.rows.map(row => row.term), historyScraper.terms.map(term => term.text), 'parallel history completion must preserve term order');
+
     // The standalone Grade Scraper should use two independent Cognos pages when at
     // least two course jobs are selected, while preserving the selected-job order in
     // the generated output.

@@ -8,13 +8,36 @@ Module._load = function(request, parent, isMain) {
     if (request === 'playwright') return { chromium: {} };
     return originalLoad.call(this, request, parent, isMain);
 };
-const { TTUScheduleScraper } = require('./schedule-scraper');
+const { TTUScheduleScraper, cookieAppliesToHost, freshWorkerStorageState } = require('./schedule-scraper');
 Module._load = originalLoad;
 
 function isoAdd(iso, days) {
     const d = new Date(`${iso}T00:00:00Z`);
     d.setUTCDate(d.getUTCDate() + days);
     return d.toISOString().slice(0, 10);
+}
+
+function testFreshWorkerStorageState() {
+    assert.strictEqual(cookieAppliesToHost({ domain: 'schedulebuilder.ttu.edu' }), true);
+    assert.strictEqual(cookieAppliesToHost({ domain: '.schedulebuilder.ttu.edu' }), true);
+    assert.strictEqual(cookieAppliesToHost({ domain: '.ttu.edu' }), true, 'parent-domain TTU cookies are also sent to Schedule Builder');
+    assert.strictEqual(cookieAppliesToHost({ domain: 'login.ttu.edu' }), false, 'host-only login cookies do not apply to Schedule Builder');
+
+    const source = {
+        cookies: [
+            { name: 'vsb-host', domain: 'schedulebuilder.ttu.edu', value: 'a' },
+            { name: 'vsb-parent', domain: '.ttu.edu', value: 'b' },
+            { name: 'ttu-login', domain: 'login.ttu.edu', value: 'c' },
+            { name: 'idp', domain: '.microsoftonline.com', value: 'd' }
+        ],
+        origins: [
+            { origin: 'https://schedulebuilder.ttu.edu', localStorage: [{ name: 'plan', value: 'shared' }] },
+            { origin: 'https://login.ttu.edu', localStorage: [{ name: 'sso', value: 'keep' }] }
+        ]
+    };
+    const fresh = freshWorkerStorageState(source);
+    assert.deepStrictEqual(fresh.cookies.map(cookie => cookie.name), ['ttu-login', 'idp']);
+    assert.deepStrictEqual(fresh.origins.map(origin => origin.origin), ['https://login.ttu.edu']);
 }
 
 async function testSnakeWeekScanning() {
@@ -440,6 +463,7 @@ async function testStaleNoResultsDoesNotWinRace() {
 }
 
 (async () => {
+    testFreshWorkerStorageState();
     await testSnakeWeekScanning();
     await testVisitedResultCoverage();
     await testInPlaceCourseReset();

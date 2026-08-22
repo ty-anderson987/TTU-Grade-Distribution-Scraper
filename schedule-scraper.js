@@ -5,10 +5,51 @@ const { chromium } = require("playwright");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const crypto = require("crypto");
 const { normalizeCourseCode } = require("./schedule-engine");
 
 const SCHEDULE_URL = "https://schedulebuilder.ttu.edu/vsb/";
+const SCHEDULE_HOST = new URL(SCHEDULE_URL).hostname.toLowerCase();
+const VSB_SESSION_MARKER_COOKIE = "ttu_grade_vsb_worker";
 const POLL_MS = 75;
+
+function normalizedCookieDomain(domain) {
+    return String(domain || "").trim().toLowerCase().replace(/^\.+/, "");
+}
+
+function cookieAppliesToHost(cookie, host = SCHEDULE_HOST) {
+    const domain = normalizedCookieDomain(cookie?.domain);
+    const target = String(host || "").trim().toLowerCase();
+    if (!domain || !target) return false;
+    return target === domain || target.endsWith(`.${domain}`);
+}
+
+function originIsScheduleBuilder(origin) {
+    try {
+        return new URL(String(origin || "")).hostname.toLowerCase() === SCHEDULE_HOST;
+    } catch {
+        return false;
+    }
+}
+
+function freshWorkerStorageState(sourceState = {}) {
+    // Strip EVERY cookie that the browser would send to schedulebuilder.ttu.edu, not
+    // only cookies whose domain string literally contains that hostname. In particular,
+    // a parent-domain cookie such as .ttu.edu also reaches Schedule Builder and can carry
+    // server-side VSB state into what was supposed to be a fresh worker. Authentication
+    // cookies on other TTU/identity-provider hosts are preserved so SSO can still reuse
+    // the signed-in browser session and mint a brand-new Schedule Builder session.
+    return {
+        cookies: (sourceState.cookies || []).filter(cookie => !cookieAppliesToHost(cookie)),
+        origins: (sourceState.origins || []).filter(origin => !originIsScheduleBuilder(origin?.origin))
+    };
+}
+
+function shortHash(value) {
+    if (!value) return "none";
+    return crypto.createHash("sha256").update(String(value)).digest("hex").slice(0, 12);
+}
+
 
 function normalizeText(text) {
     return String(text || "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
@@ -178,6 +219,11 @@ class TTUScheduleScraper {
         this.currentTerm = "";
         this.lastActivityAt = 0;
         this.termCalendarCache = new Map();
+        this.sessionLabel = normalizeText(options.sessionLabel || "primary");
+        this.vsbSessionMarker = "";
+        this.vsbSessionCookieFingerprint = "";
+        this.vsbSessionCookieCount = 0;
+        this.vsbSessionDiagnosticsReady = false;
         fs.mkdirSync(this.profileDir, { recursive: true, mode: 0o700 });
         // Persistent Playwright profiles contain authenticated session cookies. Keep
         // them private to the current user on POSIX systems; Windows applies its own
@@ -205,18 +251,65 @@ class TTUScheduleScraper {
         this.page = pages.length ? pages[0] : await this.context.newPage();
     }
 
+    async ensureVsbSessionIdentity() {
+        if (!this.context || this.vsbSessionDiagnosticsReady) {
+            return {
+                marker: this.vsbSessionMarker,
+                cookieFingerprint: this.vsbSessionCookieFingerprint,
+                cookieCount: this.vsbSessionCookieCount
+            };
+        }
+
+        const label = (this.sessionLabel || "vsb").replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "") || "vsb";
+        this.vsbSessionMarker = `${label}-${crypto.randomUUID()}`;
+
+        // This marker is ours, not a forged VSB authentication/session token. It gives every
+        // Playwright worker an immediately visible cookie identity without touching TTU's own
+        // cookie values. TTU still creates and validates its real server session cookies.
+        await this.context.addCookies([{
+            url: SCHEDULE_URL,
+            name: VSB_SESSION_MARKER_COOKIE,
+            value: this.vsbSessionMarker,
+            sameSite: "Lax",
+            secure: true
+        }]);
+
+        const applicable = (await this.context.cookies(SCHEDULE_URL))
+            .filter(cookie => cookie.name !== VSB_SESSION_MARKER_COOKIE)
+            .filter(cookie => cookieAppliesToHost(cookie));
+        const material = applicable
+            .map(cookie => `${normalizedCookieDomain(cookie.domain)}|${cookie.path || "/"}|${cookie.name}|${cookie.value}`)
+            .sort()
+            .join("\n");
+
+        this.vsbSessionCookieCount = applicable.length;
+        this.vsbSessionCookieFingerprint = material ? shortHash(material) : "none";
+        this.vsbSessionDiagnosticsReady = true;
+        this.status(`VSB session ${this.sessionLabel}: marker ${this.vsbSessionMarker}; server-cookie fingerprint ${this.vsbSessionCookieFingerprint} (${applicable.length} applicable cookie${applicable.length === 1 ? "" : "s"}).`, {
+            phase: "schedule-session",
+            sessionLabel: this.sessionLabel,
+            sessionMarker: this.vsbSessionMarker,
+            sessionCookieFingerprint: this.vsbSessionCookieFingerprint,
+            sessionCookieCount: applicable.length
+        });
+
+        return {
+            marker: this.vsbSessionMarker,
+            cookieFingerprint: this.vsbSessionCookieFingerprint,
+            cookieCount: this.vsbSessionCookieCount
+        };
+    }
+
     async createParallelWorker(options = {}) {
         await this.requireReady();
         // Persistent Playwright contexts intentionally report browser() as null, so a
         // worker cannot be created with this.context.browser(). Launch one small, isolated
-        // Chromium instance instead. It receives the authenticated TTU SSO state but NOT
-        // Schedule Builder's site-local session state, giving the second VSB its own server
-        // session so clearCourses() in one worker cannot reset the other worker.
+        // Chromium instance instead. Copy only the reusable SSO state and deliberately
+        // remove every cookie that would be sent to Schedule Builder (including parent-domain
+        // .ttu.edu cookies). The first worker navigation must therefore bootstrap a new VSB
+        // application/server session instead of cloning the primary worker's VSB state.
         const sourceState = await this.context.storageState();
-        const storageState = {
-            cookies: (sourceState.cookies || []).filter(cookie => !String(cookie.domain || "").toLowerCase().includes("schedulebuilder.ttu.edu")),
-            origins: (sourceState.origins || []).filter(origin => !String(origin.origin || "").toLowerCase().includes("schedulebuilder.ttu.edu"))
-        };
+        const storageState = freshWorkerStorageState(sourceState);
         const browser = await chromium.launch({ headless: true });
         let context;
         try {
@@ -231,7 +324,8 @@ class TTUScheduleScraper {
         }
         const worker = new TTUScheduleScraper({
             onStatus: options.onStatus || (() => {}),
-            profileDir: this.profileDir
+            profileDir: this.profileDir,
+            sessionLabel: options.sessionLabel || `worker-${crypto.randomUUID().slice(0, 8)}`
         });
         worker.browser = browser;
         worker.context = context;
@@ -257,6 +351,7 @@ class TTUScheduleScraper {
                     error.code = "PARALLEL_WORKER_UNAVAILABLE";
                     throw error;
                 }
+                await worker.ensureVsbSessionIdentity();
             };
             await Promise.race([
                 prepare(),
@@ -438,6 +533,7 @@ class TTUScheduleScraper {
                     terms,
                     currentTerm: ""
                 });
+                await this.ensureVsbSessionIdentity();
                 return terms;
             }
 
@@ -465,6 +561,7 @@ class TTUScheduleScraper {
                     terms,
                     currentTerm: this.currentTerm
                 });
+                await this.ensureVsbSessionIdentity();
                 return terms;
             }
 
@@ -2292,7 +2389,18 @@ class TTUScheduleScraper {
         this.authPhone = "";
         this.terms = [];
         this.currentTerm = "";
+        this.vsbSessionMarker = "";
+        this.vsbSessionCookieFingerprint = "";
+        this.vsbSessionCookieCount = 0;
+        this.vsbSessionDiagnosticsReady = false;
     }
 }
 
-module.exports = { TTUScheduleScraper, SCHEDULE_URL };
+module.exports = {
+    TTUScheduleScraper,
+    SCHEDULE_URL,
+    SCHEDULE_HOST,
+    VSB_SESSION_MARKER_COOKIE,
+    cookieAppliesToHost,
+    freshWorkerStorageState
+};
