@@ -31,6 +31,8 @@ Cognos / grade history    Visual Schedule Builder
 
 Cognos and Schedule Builder use separate persistent Playwright browser profiles. Credentials and verification codes are accepted by the local UI, filled into the appropriate TTU page, and discarded. They are not written to `data/`, generated HTML, or source files.
 
+The primary Schedule Builder browser remains persistent for normal SSO reuse. Parallel VSB workers are different: each launches in its own non-persistent Chromium context, copies reusable TTU/identity-provider SSO state, and removes every cookie that would be sent to `schedulebuilder.ttu.edu`, including parent-domain `.ttu.edu` cookies and Schedule Builder origin storage. The worker then navigates into VSB and lets TTU create a fresh application/server session. For debugging, the app adds its own non-authentication cookie `ttu_grade_vsb_worker` containing a UUID marker and logs a short SHA-256-derived fingerprint of the real applicable VSB cookies; raw TTU cookie values are never logged.
+
 ## Course lifecycle
 
 When a course is added:
@@ -60,7 +62,11 @@ During the same conflict-free enumeration, the worker records a compact histogra
 
 ### Adaptive Schedule Builder concurrency
 
-Schedule Builder concurrency is separate from Cognos concurrency. Cognos remains fixed at two history workers. VSB uses one authenticated primary session plus up to four isolated Chromium sessions that clone TTU SSO state but intentionally establish separate Schedule Builder server sessions. Deep verification scales by result count: 1 session below 8 results, 2 for 8–23, 3 for 24–59, 4 for 60–99, and 5 for 100+. Result ranges are disjoint and near-equal; the final worker scans its range backward from the end. Parallel data is accepted only when every worker agrees on the total result count, every preliminary option key reappears, and every VSB result index is covered. Any failed or incomplete merge falls back to the primary full scan.
+Schedule Builder concurrency is separate from Cognos concurrency. Cognos remains fixed at two history workers. VSB uses one authenticated primary session plus up to four isolated Chromium sessions, for a five-session ceiling. Isolated workers preserve reusable SSO state but strip all cookies/origin state applicable to Schedule Builder before first navigation, forcing a fresh VSB application/server session rather than cloning the primary worker's plan state. Session UUID markers and short server-cookie fingerprints make accidental session reuse visible in the console.
+
+Deep verification scales by result count: 1 session below 8 results, 2 for 8–23, 3 for 24–59, 4 for 60–99, and 5 for 100+. The actual lane count is the number of healthy sessions available at that moment; five is a capacity ceiling rather than a requirement. Result ranges are disjoint and near-equal, with the final lane scanning backward from the end. Fast timetable prefetch has higher scheduling priority than deep verification, so background verification can pause/yield when a newly added course needs an authoritative preliminary timetable.
+
+Parallel data is accepted only when workers report the expected total result count, every preliminary option key reappears, and every assigned VSB result index is covered. Successful ranges are retained. A failed worker is removed from the pool and only its missing range is retried on a healthy worker or the primary session; the application falls back to a complete primary scan only if targeted repair cannot produce a consistent result. Worker creation is serialized so concurrent prefetch/verification requests cannot exceed the configured five-session cap.
 
 ## Grade matching
 
@@ -107,7 +113,7 @@ The RMP data path is enrichment-only. Neither schedule analysis nor grade-histor
 
 ## Standalone Cognos concurrency (V3.0.9)
 
-The legacy Grade Analytics `/api/scrape` path now uses two new pages in the authenticated Cognos context. Each page selects its own term/subject/course and uses page-scoped report detection. Jobs are assigned from a shared queue and stored by original job index before output generation, so parallel completion cannot reorder the exported dataset.
+The legacy Grade Analytics `/api/scrape` path uses two independent pages in the authenticated Cognos context. Schedule Analyzer grade-history retrieval uses the same two-worker model. Each page owns its term/subject/course prompt interactions and uses page-scoped report detection. Jobs are assigned from a shared queue and stored by original job index before output generation, so real overlap does not reorder exported data. Reliability tests assert that two Cognos jobs are simultaneously active rather than merely creating two tabs and processing them serially.
 
 ## Current professor-ranking source hierarchy
 
@@ -145,6 +151,12 @@ The card header reserves a consistent title/action region on desktop so long ins
 A schedule-analysis refresh from cached data is not treated as missing/loading TTU data. If the checked courses are fully verified, the subset/re-ranking notice uses the green ready treatment. If fast timetable data is loaded but deep verification is still running, the notice uses the neutral informational treatment. User-selected subsets explicitly say that all loaded courses remain cached.
 
 
+
+## V3.1.1 VSB session-isolation hotfix
+
+A live multi-worker run showed that separate Playwright contexts could still inherit the same Schedule Builder backend state when parent-domain `.ttu.edu` cookies were copied into every worker. The fix treats cookie applicability by host semantics rather than literal domain-string matching: anything the browser would send to `schedulebuilder.ttu.edu` is removed from the cloned worker storage state before VSB startup. TTU then establishes a fresh Schedule Builder session for that worker.
+
+Live diagnostics after the fix showed distinct server-cookie fingerprints across the primary and isolated workers, simultaneous progress on disjoint PHYS 2401 ranges, and four concurrent lanes advancing on the 107-result PHYS 1408 deep scan. This confirms that the VSB pool now performs real session-isolated parallel work while preserving the existing fast-prefetch priority and targeted-repair safeguards.
 
 ## Pin invalidation for course-specific changes
 

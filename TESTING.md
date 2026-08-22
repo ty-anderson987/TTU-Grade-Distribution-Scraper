@@ -116,9 +116,11 @@ If VSB's full week range cannot be verified, V3 intentionally uses conservative 
 - With 6-12 uncached historical terms selected for one course, confirm the server log shows two Cognos history workers and that both make forward progress. Compare returned term/professor rows with the manual Cognos report.
 - Force or reproduce a transient Cognos empty result. Confirm the term is retried on a fresh prompt before the UI says it has no history. If both attempts fail because Cognos is unavailable, confirm the course says the term could not be verified rather than claiming authoritative no-history.
 - Load Recent 6, then switch to Recent 12. Confirm the six previously verified terms are reused from the per-term cache and only the newly selected terms are requested from Cognos. Switch back to Recent 6 and confirm it is immediate.
-- Add at least five uncached courses in one action. Confirm the primary Schedule Builder starts immediately and, when TTU SSO permits it, up to four additional isolated VSB workers load other courses concurrently. Look for `[schedule-workers] Isolated worker ready (5/5 total VSB sessions).` plus `[schedule-worker-2]` through `[schedule-worker-5]` log lines, then verify every captured course/CRN against the official VSB result.
-- Stress-test adaptive deep verification with representative result counts around the boundaries: 7→1 session, 8→2, 24→3, 60→4, and 100→5. For PHYS 1408 (107 results), confirm the log reports five disjoint ranges (1→22, 23→44, 45→65, 66→86, 107→87), periodic lane summaries, and complete coverage across 5 sessions.
+- Add at least five uncached courses in one action. Confirm the primary Schedule Builder starts immediately and, when TTU SSO permits it, up to four additional isolated VSB workers load other courses concurrently. Each ready-worker log must show its own UUID marker and server-cookie fingerprint. Distinct fingerprints across active sessions are expected; a `WARNING: duplicate server-cookie fingerprint detected` line is a failure that must be investigated. Verify every captured course/CRN against the official VSB result.
+- Stress-test adaptive deep verification with representative result counts around the boundaries: 7→1 desired session, 8→2, 24→3, 60→4, and 100→5. The actual lane count may be lower when a worker cannot bootstrap or higher-priority fast timetable work needs capacity. For PHYS 1408 (107 results), confirm the available sessions receive disjoint near-equal ranges, periodic lane summaries show more than one lane advancing, and the final result reaches complete index coverage.
 - Temporarily prevent isolated VSB workers from reusing SSO (or let their startup time out). Confirm the primary Schedule Builder continues loading courses and no course is marked failed solely because parallel worker creation failed.
+- Verify `freshWorkerStorageState()` removes host-only `schedulebuilder.ttu.edu`, `.schedulebuilder.ttu.edu`, and parent `.ttu.edu` cookies while retaining unrelated TTU login/identity-provider state.
+- Force one deep-scan worker to fail after completing part of its assigned work. Confirm completed ranges are kept, only the missing range is retried, and a complete primary rescan occurs only if targeted repair also fails.
 
 
 
@@ -247,3 +249,14 @@ For the final V3.1.1 archive:
 - Verify changing preferences on an unpinned course does not show the confirmation.
 - Force a preference-save failure in a test fixture and verify the original pin is restored.
 - Verify Profile, RMP, Compare, and unrelated course pins remain unaffected.
+
+
+## V3.1.1 VSB session-isolation checks
+
+- Run `npm test` and confirm `test-schedule-scraper.js` passes the cookie-applicability and fresh-worker-storage regression cases. Parent `.ttu.edu` cookies must be treated as applicable to `schedulebuilder.ttu.edu`.
+- Start at least two VSB sessions and confirm each reports a different `ttu_grade_vsb_worker` UUID marker.
+- Compare the logged server-cookie fingerprints. Distinct fingerprints are expected for independently bootstrapped VSB sessions; raw TTU cookie values must never appear in the log.
+- On a course large enough for parallel deep verification, confirm at least two lane counters advance before either lane finishes. This distinguishes real overlap from serial work behind multiple browser tabs.
+- Add a new course while deep verification is active. Confirm the background verifier yields/pauses, the new course receives its preliminary fast timetable first, and deep verification later resumes without discarding completed work.
+- Treat five VSB sessions as a maximum capacity, not a pass condition. A run using fewer healthy lanes is valid if coverage is complete and fast timetable priority is preserved.
+- For Cognos, confirm two different terms/jobs are simultaneously active as `(worker 1/2)` and `(worker 2/2)` and that completion order does not change requested output order.

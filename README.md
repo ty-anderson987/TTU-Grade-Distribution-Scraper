@@ -14,6 +14,7 @@ The application combines official TTU timetable and grade-distribution data with
 - Texas Tech Visual Schedule Builder timetable loading
 - Fast timetable loading prioritized ahead of background full-semester verification
 - Adaptive 1–5 VSB sessions for large full-semester scans
+- Fresh per-worker VSB server sessions with UUID diagnostics and cookie-fingerprint isolation checks
 - Exact course-code validation and in-place clearing of pre-existing VSB courses
 - Linked lecture/lab/discussion/no-credit bundles kept together
 - Conflict-free local schedule generation and ranking
@@ -156,7 +157,9 @@ When courses are added, preliminary VSB timetable data is given priority so the 
 
 After preliminary timetables are available, full-semester verification runs in the background for labs, discussions, no-credit companions, exams, holidays, irregular dates, and other unusual timetable patterns.
 
-For large result sets, full-semester verification can use up to five VSB sessions. Parallel results are accepted only after coverage and result-count checks pass. If an isolated worker misses an exact course or range, the application preserves successful work and retries the affected work through a healthy/primary session rather than silently accepting incomplete data.
+For large result sets, full-semester verification can use up to five VSB sessions. The primary authenticated session is joined by isolated Chromium workers that reuse only the TTU SSO state needed to sign in; cookies that would be sent to `schedulebuilder.ttu.edu` (including parent-domain `.ttu.edu` cookies) are removed before each worker enters VSB so TTU can bootstrap a separate Schedule Builder server session. Each VSB session receives a local UUID marker and a short hash of its applicable TTU Schedule Builder cookies for diagnostics; real authentication-cookie values are never printed. Parallel results are accepted only after coverage and result-count checks pass. If an isolated worker misses an exact course or range, the application preserves successful work and retries only the affected range through a healthy/primary session rather than silently accepting incomplete data.
+
+Fast timetable work remains higher priority than background deep verification. If a new course is added while a large deep scan is running, verification can yield so the new course's preliminary VSB timetable becomes available first, then resume from cached/verified progress. Five VSB sessions are therefore a ceiling, not a requirement that every deep scan must occupy continuously.
 
 ### Course pinning
 
@@ -221,6 +224,7 @@ The generated pages can be opened locally in a web browser.
 - Your Texas Tech credentials are used only to perform the requested Texas Tech authentication.
 - The application does not intentionally save your Texas Tech password or MFA code.
 - Persistent local Playwright browser profiles may retain authenticated Texas Tech session information.
+- Parallel VSB workers intentionally create fresh Schedule Builder application sessions; the console logs only a generated worker marker and a short cookie fingerprint, not TTU cookie values.
 - Schedule/grade/RMP caches are stored locally to reduce unnecessary repeated requests.
 - The local server normally binds only to `127.0.0.1:3847` and is not intended to be exposed directly to the public Internet.
 - Do not commit browser profiles, cached authentication data, logs containing sensitive information, or other private local files to a public repository.
@@ -233,7 +237,7 @@ Run the regression suite with:
 npm test
 ```
 
-The automated tests cover schedule generation, linked bundles, conflict detection, parallel utilities, VSB reset/reliability behavior, Cognos reliability/concurrency, RMP handling, and release-level UI/behavior checks.
+The automated tests cover schedule generation, linked bundles, conflict detection, parallel utilities, VSB reset/reliability behavior, parent-domain Schedule Builder cookie stripping/session isolation, Cognos reliability/concurrency, RMP handling, and release-level UI/behavior checks.
 
 Live TTU markup can change, so final course availability, meeting times, instructors, and CRNs should still be verified in official Texas Tech systems.
 

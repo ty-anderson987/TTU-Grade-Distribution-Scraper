@@ -6,7 +6,7 @@ This document records the cumulative correctness, reliability, UI, and live-acce
 
 The original v3.0.7 audit covered the Node HTTP server, Cognos grade-history scraper, Visual Schedule Builder scraper, 3-session parallel verification/merge path, schedule-ranking engine and worker thread, persistent cache, launch/setup scripts, and the four browser HTML surfaces. V3.0.8 extends the same validated range/merge machinery to an adaptive 1–5 VSB ceiling. V3.0.9 adds conservative RMP aggregate enrichment and extends the proven 2-page Cognos model to the standalone Grade Scraper as well as Schedule Analyzer history.
 
-The highest-risk areas were treated conservatively: missing Cognos data is not accepted after one suspicious empty response, partial VSB merges are rejected, and any failed/incomplete parallel timetable verification falls back to the primary full scan instead of caching partial data.
+The highest-risk areas were treated conservatively: missing Cognos data is not accepted after one suspicious empty response, partial VSB merges are rejected, and failed/incomplete parallel timetable verification preserves completed ranges and repairs only missing ranges before considering a complete primary fallback.
 
 ## Important fixes
 
@@ -14,6 +14,8 @@ The highest-risk areas were treated conservatively: missing Cognos data is not a
 - Cognos waits for report rows to stabilize after the report header appears and retries suspicious empty/missing terms from a fresh prompt.
 - Unverified/ambiguous negative history results are not persisted as authoritative no-history cache entries.
 - Parallel VSB verification records the exact result indexes visited; complete index coverage and option-key recovery are required before merged data is accepted.
+- Isolated VSB workers now strip every cookie applicable to `schedulebuilder.ttu.edu`, including parent `.ttu.edu` cookies, before startup so cloned SSO state cannot silently clone the same Schedule Builder application session.
+- Each VSB session exposes a generated UUID marker plus a short fingerprint of applicable server cookies for diagnostics without logging the underlying TTU cookie values.
 - Schedule gaps/end-times correctly merge overlapping and nested occupied intervals.
 - Malformed analysis limits/time preferences are normalized instead of disabling safety bounds or leaking invalid time values.
 - Courses with cached grade data but missing timetable options are re-queued for Schedule Builder rather than marked ready.
@@ -36,15 +38,16 @@ The release passed:
 
 `npm audit` could not be completed in the audit environment because the npm registry was unreachable (`EAI_AGAIN`). A live server smoke test also could not be launched in the audit environment because `node_modules/playwright` was not installed there. The source-level checks and project tests above do not require that dependency.
 
-## Live TTU acceptance test still required
+## Live TTU acceptance status
 
-Texas Tech controls the authentication, Cognos, and Visual Schedule Builder pages. No offline test can prove those pages will never change. Before treating a release as fully accepted, test at least:
+Texas Tech controls the authentication, Cognos, and Visual Schedule Builder pages, so offline tests cannot prove future markup stability. A live V3.1.1 run after the session-isolation hotfix did validate the highest-risk concurrency path: the primary and isolated VSB workers reported distinct server-cookie fingerprints, MATH 3350/MATH 1451 split work across two sessions, PHYS 2401 advanced on multiple disjoint ranges concurrently, and PHYS 1408 advanced on four simultaneous lanes while new-course fast loads continued to receive priority. Cognos grade-history logs also showed both `(worker 1/2)` and `(worker 2/2)` active on different terms.
 
-1. One normal small course.
-2. A course with 12 historical grade terms.
-3. Five uncached courses together to verify all isolated VSB sessions, plus a 100+ result course to exercise five-way deep verification.
-4. A large course such as PHYS 1408 to verify adaptive deep scanning up to five VSB sessions plus missing-range repair/fallback behavior.
-5. A course known to have sparse/missing historical terms to confirm the retry/no-history behavior.
+Remaining release smoke tests should still include:
+
+1. A normal small course and linked lecture/lab/no-credit bundle checked against official CRNs/times.
+2. A course with 12 historical grade terms, including a sparse/missing term.
+3. A clean 100+ result run when all five VSB sessions are simultaneously available; fewer lanes are valid when higher-priority fast timetable work or worker startup availability temporarily consumes capacity.
+4. A forced worker failure to confirm completed VSB ranges remain cached and only the missing range is repaired.
 
 If TTU changes its markup, the safe behavior should be failure/fallback rather than silently accepting partial data, but selectors/parsers may still need maintenance.
 
@@ -133,3 +136,14 @@ The earlier UI could use a warning-colored banner while merely recalculating sch
 ## V3.1.1 pinned-course preference audit
 
 A pinned option previously remained active after a user changed that course's Delivery, Professor priority, or professor preference. Because the pin is a hard course-option constraint, the old option could then make the refreshed schedule list appear empty even though the new preference itself was valid. V3.1.1 treats these course-specific changes as intentional invalidations of that course's lock. When a pin exists, the user is asked to confirm that the course can be unlocked before the change is applied. Only the affected course is unlocked. A successful change produces a temporary green notice explaining why the pin was removed; a failed save restores the original pin. This protects against both stale-lock dead ends and accidental preference clicks.
+
+
+## V3.1.1 VSB session-isolation live audit
+
+The original isolated-worker implementation launched separate Chromium contexts but copied storage state too literally. A parent-domain `.ttu.edu` cookie is valid for `schedulebuilder.ttu.edu`, so filtering only cookies whose domain string directly named Schedule Builder could preserve backend VSB plan/session state across workers. That explains the earlier failure mode where worker 1 advanced while workers 2–4 stayed at zero and then reported that the exact course could not be found.
+
+The corrected implementation evaluates whether each cookie would actually be sent to the Schedule Builder host and removes every applicable cookie before worker startup while preserving SSO state on other TTU/identity-provider hosts. Each worker then receives its own diagnostic `ttu_grade_vsb_worker` UUID marker and a short hash of the applicable TTU VSB cookies after connection. The marker is not an authentication token and no real cookie value is printed.
+
+A subsequent live run showed distinct fingerprints between the primary and isolated workers and genuine interleaved progress. PHYS 2401 split into disjoint ranges and multiple workers advanced simultaneously; PHYS 1408 later showed four lanes advancing concurrently across its 107 VSB results. One PHYS 2401 isolated lane eventually lost its exact-course state, but the targeted-repair path retained the completed ranges and retried only the missing range on the primary, reaching full 60-result coverage. This validates the architecture as real parallelism with fail-safe recovery rather than parallel-looking serialized work.
+
+The same live run confirmed Cognos history concurrency: separate terms were assigned to worker 1/2 and worker 2/2 at the same time. The standalone and Schedule Analyzer Cognos paths remain capped at two independent page-scoped workers.

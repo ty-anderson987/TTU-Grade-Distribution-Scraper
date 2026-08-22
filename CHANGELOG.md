@@ -1,14 +1,19 @@
 # Changelog
 
 
-## 3.1.1 — Pinned-course preference safety
+## 3.1.1 — Pinned-course preference safety + isolated VSB sessions
 
 - Prompt before a course-specific preference change unlocks an already pinned timetable option.
 - Delivery, Professor priority, and professor Prefer/Neutral/Avoid changes now invalidate only the affected course pin after approval, preventing stale locks from blocking the calendar.
 - Canceling the prompt keeps both the existing pin and current setting unchanged.
 - If a preference save fails, restore the previous pin.
 - Show a short green notice after an approved unlock so the user understands why the calendar may change.
-- Keep all VSB/Cognos scraping, fast-prefetch, and full-semester verification behavior unchanged from 3.1.0.
+- Fix VSB worker isolation by stripping every cookie applicable to `schedulebuilder.ttu.edu` from cloned worker storage state, including parent-domain `.ttu.edu` cookies, while preserving reusable SSO state on other TTU/identity-provider hosts.
+- Give every VSB session a generated `ttu_grade_vsb_worker` UUID marker and log a short server-cookie fingerprint so accidental backend-session reuse is visible without exposing TTU cookie values.
+- Keep the five-session VSB ceiling but use only currently healthy/available sessions; fast timetable prefetch continues to outrank background deep verification.
+- Preserve successful parallel deep-scan ranges when a worker fails and retry only the missing range on a healthy/primary session before considering a full primary fallback.
+- Add regression coverage for parent-domain cookie stripping/fresh worker storage state and explicit two-job Cognos overlap.
+- Live verification confirmed distinct VSB cookie fingerprints, concurrent PHYS 2401/PHYS 1408 deep-scan lanes, targeted missing-range repair, and simultaneous two-worker Cognos history retrieval.
 
 ## 3.1.0 — Click-to-pin cards, aligned result layout, and fast-timetable priority
 
