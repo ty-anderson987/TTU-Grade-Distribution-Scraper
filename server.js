@@ -33,6 +33,9 @@ const SECURITY_HEADERS = {
 fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
+fs.mkdirSync(path.join(ROOT, "logs"), { recursive: true });
+fs.writeFileSync(path.join(ROOT, "logs", "server.txt"), "");
+
 let state = {
     phase: "starting",
     message: "Starting local server...",
